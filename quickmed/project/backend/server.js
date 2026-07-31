@@ -322,6 +322,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "./db.js";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 dotenv.config();
 console.log("API Key loaded:", process.env.OPENROUTER_API_KEY ? "YES" : "NO");
@@ -573,6 +574,82 @@ app.post("/api/customers/register", async (req, res) => {
   } catch (err) {
     console.error("[quickmed-backend] /api/customers/register error:", err);
     res.status(500).json({ error: "Failed to create account." });
+  }
+});
+
+
+/* =========================================================
+   ADMIN
+========================================================= */
+const validAdminTokens = new Set(); // simple in-memory session store
+
+function requireAdmin(req, res, next) {
+  const token = req.headers["x-admin-token"];
+  if (!token || !validAdminTokens.has(token)) {
+    return res.status(401).json({ error: "Not authorized." });
+  }
+  next();
+}
+
+/* POST /api/admin/login
+   Body: { username, password }
+   Returns { token } on success — frontend sends this back as
+   x-admin-token on every admin request. */
+app.post("/api/admin/login", async (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    if (!username?.trim() || !password) {
+      return res.status(400).json({ error: "Username and password are required." });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT * FROM admins WHERE LOWER(username) = LOWER($1)",
+      [username.trim()]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ error: "Invalid username or password." });
+    }
+
+    const match = await bcrypt.compare(password, rows[0].password);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid username or password." });
+    }
+
+    const token = crypto.randomBytes(24).toString("hex");
+    validAdminTokens.add(token);
+    res.json({ token, username: rows[0].username });
+  } catch (err) {
+    console.error("[quickmed-backend] /api/admin/login error:", err);
+    res.status(500).json({ error: "Failed to authenticate." });
+  }
+});
+
+app.post("/api/admin/logout", requireAdmin, (req, res) => {
+  validAdminTokens.delete(req.headers["x-admin-token"]);
+  res.json({ ok: true });
+});
+
+/* GET /api/admin/riders — all riders, passwords stripped */
+app.get("/api/admin/riders", requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM riders ORDER BY id");
+    const safe = rows.map(({ password, ...rest }) => rest);
+    res.json(safe);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/admin/riders error:", err);
+    res.status(500).json({ error: "Failed to fetch riders." });
+  }
+});
+
+/* GET /api/admin/customers — all customers, passwords stripped */
+app.get("/api/admin/customers", requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM customers ORDER BY id");
+    const safe = rows.map(({ password, ...rest }) => rest);
+    res.json(safe);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/admin/customers error:", err);
+    res.status(500).json({ error: "Failed to fetch customers." });
   }
 });
 
