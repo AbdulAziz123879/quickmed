@@ -40,6 +40,7 @@ export default function QuickMedApp() {
   const [cart, setCart] = useState([]);
   const [history, setHistory] = useState([]);
   const [rider, setRider] = useState(null);
+  const [customer, setCustomer] = useState(null); 
   const pageRef = useRef(page);
   const selectedMedicineRef = useRef(selectedMedicine);
   useEffect(() => { pageRef.current = page; }, [page]);
@@ -81,6 +82,13 @@ export default function QuickMedApp() {
     goTo("home");
   }, [goTo]);
 
+
+  const handleCustomerLogin = useCallback((c) => setCustomer(c), []);
+  const handleCustomerLogout = useCallback(() => {
+   setCustomer(null);
+    goTo("home");
+},   [goTo]);
+
   const addToCart = useCallback((m, qty = 1) => {
     setCart((c) => {
       const existing = c.find((i) => i.id === m.id);
@@ -110,9 +118,9 @@ export default function QuickMedApp() {
   else if (page === "detail") body = <DetailPage medicine={selectedMedicine} theme={theme} dark={dark} wishlist={wishlist} toggleWishlist={toggleWishlist} addToCart={addToCart} goTo={goTo} goBack={goBack} />;
   else if (page === "cart") body = <CartPage theme={theme} cart={cart} updateQty={updateQty} removeFromCart={removeFromCart} goTo={goTo} />;
   else if (page === "checkout") body = <CheckoutPage theme={theme} cart={cart} goTo={goTo} addToCart={addToCart} />;
-  else if (page === "login") body = <LoginPage theme={theme} goTo={goTo} onRiderLogin={handleRiderLogin} />;
-  else if (page === "register") body = <RegisterPage theme={theme} goTo={goTo} />;
-  else if (page === "dashboard") body = <DashboardPage theme={theme} cart={cart} wishlist={wishlist} goTo={goTo} addToCart={addToCart} />;
+  else if (page === "login") body = <LoginPage theme={theme} goTo={goTo} onRiderLogin={handleRiderLogin} onCustomerLogin={handleCustomerLogin} />;
+  else if (page === "register") body = <RegisterPage theme={theme} goTo={goTo} onCustomerLogin={handleCustomerLogin} />;
+  else if (page === "dashboard") body = <DashboardPage theme={theme} cart={cart} wishlist={wishlist} goTo={goTo} addToCart={addToCart} customer={customer} onLogout={handleCustomerLogout} />;
   else if (page === "tracking") body = <TrackingPage theme={theme} />;
   else if (page === "about") body = <AboutPage theme={theme} />;
   else if (page === "contact") body = <ContactPage theme={theme} />;

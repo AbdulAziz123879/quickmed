@@ -321,6 +321,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "./db.js";
+import bcrypt from "bcryptjs";
 
 dotenv.config();
 console.log("API Key loaded:", process.env.OPENROUTER_API_KEY ? "YES" : "NO");
@@ -532,6 +533,78 @@ app.put("/api/riders/:id", async (req, res) => {
   } catch (err) {
     console.error("[quickmed-backend] PUT /api/riders/:id error:", err);
     res.status(500).json({ error: "Failed to update rider profile." });
+  }
+});
+
+/* =========================================================
+   CUSTOMERS
+========================================================= */
+
+/* POST /api/customers/register
+   Body: { name, email, phone, password }
+   Creates a new customer account with a bcrypt-hashed password. */
+app.post("/api/customers/register", async (req, res) => {
+  try {
+    const { name, email, phone, password } = req.body || {};
+    if (!name?.trim() || !email?.trim() || !password) {
+      return res.status(400).json({ error: "Name, email and password are required." });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters." });
+    }
+
+    const existing = await pool.query(
+      "SELECT id FROM customers WHERE LOWER(email) = LOWER($1)",
+      [email.trim()]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: "An account with this email already exists." });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      `INSERT INTO customers (name, email, phone, password)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, phone, created_at`,
+      [name.trim(), email.trim(), phone?.trim() || null, hashed]
+    );
+
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/customers/register error:", err);
+    res.status(500).json({ error: "Failed to create account." });
+  }
+});
+
+/* POST /api/customers/login
+   Body: { email, password }
+   Looks up a customer by email (case-insensitive) and verifies the
+   bcrypt hash. Returns the public profile (no password) on success. */
+app.post("/api/customers/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email?.trim() || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT * FROM customers WHERE LOWER(email) = LOWER($1)",
+      [email.trim()]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const match = await bcrypt.compare(password, rows[0].password);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const { password: _pw, ...profile } = rows[0];
+    res.json(profile);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/customers/login error:", err);
+    res.status(500).json({ error: "Failed to authenticate." });
   }
 });
 

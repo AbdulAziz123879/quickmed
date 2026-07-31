@@ -1,7 +1,7 @@
-
-
-
-
+/* DashboardPage.jsx
+   Customer dashboard — shows real logged-in customer info and lets them
+   log out via the sidebar (wired to onLogout from App.jsx).
+*/
 import { useState, useEffect } from "react";
 import {
   Home as HomeIcon, Pill, Package, FileText, Heart, Bell, User, Settings, LogOut,
@@ -12,7 +12,7 @@ import { api } from "../api";
 import { Reveal, Badge } from "../components/Common";
 import { PrescriptionUploadButton } from "../components/PrescriptionUploadButton";
 
-export function DashboardPage({ theme, cart, wishlist, goTo, addToCart }) {
+export function DashboardPage({ theme, cart, wishlist, goTo, addToCart, customer, onLogout }) {
   const [orders, setOrders] = useState([]);
 
   useEffect(() => {
@@ -23,13 +23,27 @@ export function DashboardPage({ theme, cart, wishlist, goTo, addToCart }) {
   const sideItems = [
     { icon: HomeIcon, label: "Dashboard" }, { icon: Pill, label: "Medicines", go: "medicines" }, { icon: Package, label: "Orders" },
     { icon: FileText, label: "Prescriptions" }, { icon: Heart, label: "Wishlist" }, { icon: Bell, label: "Notifications" },
-    { icon: User, label: "Profile" }, { icon: Settings, label: "Settings" }, { icon: LogOut, label: "Logout", go: "home" },
+    { icon: User, label: "Profile" }, { icon: Settings, label: "Settings" }, { icon: LogOut, label: "Logout", action: "logout" },
   ];
+
+  const displayName = customer?.name?.split(" ")[0] || "there";
+  const initials = (customer?.name || "Guest")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <div style={{ maxWidth: 1240, margin: "0 auto", padding: "32px 24px 90px", display: "grid", gridTemplateColumns: "220px 1fr", gap: 32 }} className="qm-dash-grid">
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }} className="qm-dash-sidebar">
         {sideItems.map((it) => (
-          <button key={it.label} onClick={() => it.go && goTo(it.go)} className="qm-btn" style={{ display: "flex", alignItems: "center", gap: 12, background: it.label === "Dashboard" ? "#EFF6FF" : "none", border: "none", padding: "11px 14px", borderRadius: 10, cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: it.label === "Dashboard" ? C.primary : theme.text, textAlign: "left" }}>
+          <button
+            key={it.label}
+            onClick={() => (it.action === "logout" ? onLogout?.() : it.go && goTo(it.go))}
+            className="qm-btn"
+            style={{ display: "flex", alignItems: "center", gap: 12, background: it.label === "Dashboard" ? "#EFF6FF" : "none", border: "none", padding: "11px 14px", borderRadius: 10, cursor: "pointer", fontSize: 13.5, fontWeight: 600, color: it.label === "Dashboard" ? C.primary : theme.text, textAlign: "left" }}
+          >
             <it.icon size={17} /> {it.label}
           </button>
         ))}
@@ -38,10 +52,10 @@ export function DashboardPage({ theme, cart, wishlist, goTo, addToCart }) {
         <Reveal>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
             <div>
-              <h1 className="qm-display" style={{ fontSize: 24, fontWeight: 800 }}>Welcome back, Ayesha</h1>
+              <h1 className="qm-display" style={{ fontSize: 24, fontWeight: 800 }}>Welcome back, {displayName}</h1>
               <p style={{ color: theme.sub, fontSize: 13.5, marginTop: 4 }}>Here's what's happening with your health today.</p>
             </div>
-            <div style={{ width: 42, height: 42, borderRadius: "50%", background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800 }}>AR</div>
+            <div style={{ width: 42, height: 42, borderRadius: "50%", background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800 }}>{initials}</div>
           </div>
         </Reveal>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 32 }} className="qm-dash-stats">
