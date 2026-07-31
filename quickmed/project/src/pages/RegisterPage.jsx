@@ -1,46 +1,4 @@
-// /* RegisterPage.jsx
-//    User registration form.
-// */
-// import { useState } from "react";
-// import { C, inputStyle } from "../theme";
-// import { Reveal } from "../components/Common";
-// import { AuthIllustration } from "../components/AuthIllustration";
 
-// export function RegisterPage({ theme, goTo }) {
-//   const [pw, setPw] = useState("");
-//   const strength = pw.length === 0 ? 0 : pw.length < 6 ? 1 : pw.length < 10 ? 2 : 3;
-//   const strengthLabel = ["", "Weak", "Fair", "Strong"][strength];
-//   const strengthColor = ["", C.danger, "#F59E0B", C.success][strength];
-//   return (
-//     <div style={{ maxWidth: 1000, margin: "0 auto", padding: "56px 24px 90px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center" }} className="qm-auth-grid">
-//       <Reveal><AuthIllustration theme={theme} /></Reveal>
-//       <Reveal delay={100}>
-//         <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 20, padding: 36, maxWidth: 400 }}>
-//           <h2 className="qm-display" style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Create your account</h2>
-//           <p style={{ fontSize: 13.5, color: theme.sub, marginBottom: 24 }}>Get medicines delivered in 30 minutes.</p>
-//           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-//             <input placeholder="Full name" style={inputStyle(theme)} />
-//             <input placeholder="Email address" style={inputStyle(theme)} />
-//             <input placeholder="Phone number" style={inputStyle(theme)} />
-//             <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Create password" style={inputStyle(theme)} />
-//             {pw.length > 0 && (
-//               <div>
-//                 <div style={{ height: 4, borderRadius: 999, background: theme.border, overflow: "hidden" }}>
-//                   <div style={{ height: "100%", width: `${strength * 33.3}%`, background: strengthColor, transition: "width 0.3s" }} />
-//                 </div>
-//                 <div style={{ fontSize: 11.5, color: strengthColor, marginTop: 4, fontWeight: 600 }}>{strengthLabel} password</div>
-//               </div>
-//             )}
-//             <button onClick={() => goTo("dashboard")} className="qm-btn" style={{ background: C.primary, color: "#fff", border: "none", padding: "13px", borderRadius: 12, fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginTop: 8 }}>Create account</button>
-//           </div>
-//           <div style={{ textAlign: "center", fontSize: 13, color: theme.sub, marginTop: 20 }}>
-//             Already have an account? <button onClick={() => goTo("login")} style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, cursor: "pointer" }}>Log in</button>
-//           </div>
-//         </div>
-//       </Reveal>
-//       </div>
-//   );
-// }
 
 
 

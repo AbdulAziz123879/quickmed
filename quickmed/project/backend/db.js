@@ -13,3 +13,6 @@ export const pool = new pg.Pool({
 pool.on("error", (err) => {
   console.error("[quickmed-backend] Unexpected PostgreSQL error:", err);
 });
+
+
+// this is database connection pool, which is used to query the database. It is shared across all routes and is automatically closed when the server shuts down.
