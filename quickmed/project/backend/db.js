@@ -15,4 +15,3 @@ pool.on("error", (err) => {
 });
 
 
-def get_database_connection():
