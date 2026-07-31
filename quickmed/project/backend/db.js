@@ -15,4 +15,4 @@ pool.on("error", (err) => {
 });
 
 
-// this is database connection pool, which is used to query the database. It is shared across all routes and is automatically closed when the server shuts down.
+def get_database_connection():
