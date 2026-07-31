@@ -1,0 +1,107 @@
+/* responsive.css
+   All responsive grid/layout breakpoints, grouped by the section/page
+   they belong to (matches the component that used to hold each inline
+   <style> tag).
+*/
+
+/* ---- Navbar ---- */
+@media (max-width: 860px) {
+  .qm-nav-desktop { display: none !important; }
+  .qm-desktop-only { display: none !important; }
+  .qm-hamburger { display: flex !important; }
+}
+
+/* ---- Home / Hero ---- */
+@media (max-width: 900px) {
+  .qm-hero-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Home / Features ---- */
+@media (max-width: 1000px) {
+  .qm-feature-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 560px) {
+  .qm-feature-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Home / How it works (steps) ---- */
+@media (max-width: 800px) {
+  .qm-steps-grid { grid-template-columns: 1fr 1fr !important; row-gap: 40px; }
+  .qm-steps-line { display: none; }
+}
+@media (max-width: 460px) {
+  .qm-steps-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Home / Why choose us ---- */
+@media (max-width: 900px) {
+  .qm-why-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Medicines catalog grid ---- */
+@media (max-width: 1000px) {
+  .qm-med-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 560px) {
+  .qm-med-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Medicine detail page ---- */
+@media (max-width: 860px) {
+  .qm-detail-grid { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 700px) {
+  .qm-related-grid { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 460px) {
+  .qm-related-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Cart page ---- */
+@media (max-width: 800px) {
+  .qm-cart-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Checkout page ---- */
+@media (max-width: 800px) {
+  .qm-checkout-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Login / Register (shared auth layout) ---- */
+@media (max-width: 800px) {
+  .qm-auth-grid { grid-template-columns: 1fr !important; }
+  .qm-auth-grid > div:first-child { display: none; }
+}
+
+/* ---- Dashboard ---- */
+@media (max-width: 900px) {
+  .qm-dash-grid { grid-template-columns: 1fr !important; }
+  .qm-dash-sidebar { flex-direction: row; overflow-x: auto; }
+}
+@media (max-width: 700px) {
+  .qm-dash-stats { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* ---- About page ---- */
+@media (max-width: 700px) {
+  .qm-about-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Contact page ---- */
+@media (max-width: 700px) {
+  .qm-contact-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ---- Footer ---- */
+/* @media (max-width: 800px) {
+  .qm-footer-grid { grid-template-columns: 1fr 1fr !important; }
+} */
+
+/* ---- Footer ---- */
+@media (max-width: 1100px) {
+  .qm-footer-grid { grid-template-columns: 1.3fr 1fr 1fr !important; row-gap: 32px; }
+}
+@media (max-width: 700px) {
+  .qm-footer-grid { grid-template-columns: 1fr 1fr !important; }
+  .qm-footer-bottom { flex-direction: column; align-items: flex-start !important; }
+}

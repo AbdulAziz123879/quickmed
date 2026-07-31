@@ -1,0 +1,64 @@
+/* animations.css
+   Keyframes and reusable utility classes (buttons, cards, links, fonts).
+   The .qm-link accent color is hardcoded to match design token C.primary (#2563EB)
+   since plain CSS files can't read JS variables.
+*/
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-14px); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.qm-display {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.qm-card-hover {
+  transition: transform 0.35s cubic-bezier(.22, 1, .36, 1), box-shadow 0.35s;
+}
+.qm-card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px -18px rgba(37, 99, 235, 0.28);
+}
+
+.qm-btn {
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.qm-btn:active {
+  transform: scale(0.97);
+}
+
+.qm-link {
+  position: relative;
+}
+.qm-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0;
+  height: 2px;
+  background: #2563EB; /* C.primary */
+  transition: width 0.25s;
+}
+.qm-link:hover::after {
+  width: 100%;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9CA3AF;
+}
