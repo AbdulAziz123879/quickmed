@@ -652,6 +652,16 @@ app.get("/api/admin/customers", requireAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch customers." });
   }
 });
+/* GET /api/admin/orders — all orders */
+app.get("/api/admin/orders", requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM orders ORDER BY id DESC");
+    res.json(rows);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/admin/orders error:", err);
+    res.status(500).json({ error: "Failed to fetch orders." });
+  }
+});
 
 /* POST /api/customers/login
    Body: { email, password }

@@ -20,11 +20,16 @@ export function DashboardPage({ theme, cart, wishlist, goTo, addToCart, customer
   }, []);
 
   const wishlistCount = Object.values(wishlist).filter(Boolean).length;
+  // const sideItems = [
+  //   { icon: HomeIcon, label: "Dashboard" }, { icon: Pill, label: "Medicines", go: "medicines" }, { icon: Package, label: "Orders" },
+  //   { icon: FileText, label: "Prescriptions" }, { icon: Heart, label: "Wishlist" }, { icon: Bell, label: "Notifications" },
+  //   { icon: User, label: "Profile" }, { icon: Settings, label: "Settings" }, { icon: LogOut, label: "Logout", action: "logout" },
+  // ];
   const sideItems = [
-    { icon: HomeIcon, label: "Dashboard" }, { icon: Pill, label: "Medicines", go: "medicines" }, { icon: Package, label: "Orders" },
-    { icon: FileText, label: "Prescriptions" }, { icon: Heart, label: "Wishlist" }, { icon: Bell, label: "Notifications" },
-    { icon: User, label: "Profile" }, { icon: Settings, label: "Settings" }, { icon: LogOut, label: "Logout", action: "logout" },
-  ];
+  { icon: HomeIcon, label: "Dashboard" }, { icon: Pill, label: "Medicines", go: "medicines" }, { icon: Package, label: "Orders" },
+  { icon: Bell, label: "Notifications" },
+  { icon: Settings, label: "Settings" },
+];
 
   const displayName = customer?.name?.split(" ")[0] || "there";
   const initials = (customer?.name || "Guest")
