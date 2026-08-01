@@ -16,19 +16,6 @@ async function request(path, options = {}) {
   return data;
 }
 
-// export const api = {
-//   getMedicines: () => request("/api/medicines"),
-//   getMedicine: (id) => request(`/api/medicines/${id}`),
-//   loginRider: (id, password) =>
-//     request("/api/riders/login", { method: "POST", body: JSON.stringify({ id, password }) }),
-//   updateRider: (id, profile) =>
-//     request(`/api/riders/${id}`, { method: "PUT", body: JSON.stringify(profile) }),
-//   getOrders: () => request("/api/orders"),
-//   createOrder: (order) =>
-//     request("/api/orders", { method: "POST", body: JSON.stringify(order) }),
-// };
-
-
 
 export const api = {
   getMedicines: () => request("/api/medicines"),
