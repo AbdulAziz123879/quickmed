@@ -1,13 +1,26 @@
+
+
+
 /* RiderDashboardPage.jsx
    The rider-facing interface shown after a rider logs in. Laid out like the
    customer DashboardPage: a top identity/online-status bar, a sidebar of
    sections, and tab content —
-     Overview        online toggle, incoming requests, active delivery
+     Overview        online toggle, incoming (real) requests, active delivery
      Earnings        today/week/month/all-time totals + a 7-day bar chart
      Delivery history every completed delivery, today's first
      Edit profile    update contact + vehicle info, change password
+
+   Overview, active delivery, and delivery history are now backed by real
+   orders in PostgreSQL (see the RIDER ORDER FLOW section of server.js)
+   instead of the static INCOMING_REQUESTS / COMPLETED_TODAY /
+   DELIVERY_HISTORY arrays in riderData.js. The dashboard polls every 8s,
+   same pattern as StoreApp.jsx.
+
+   Earnings totals for "This month" / "All-time" are still the static
+   EARNINGS_TOTALS placeholder from riderData.js — wire those to a real
+   aggregation query when you need them to be accurate.
 */
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Bike, Power, LogOut, MapPin, Package, Wallet, Star, Clock, Check,
   Navigation, X, TrendingUp, LayoutDashboard, History, User, Phone, Mail,
@@ -15,12 +28,17 @@ import {
 } from "lucide-react";
 import { C, inputStyle } from "../theme";
 import { Reveal, Badge } from "../components/Common";
+import { api } from "../api";
 import {
-  RIDER_PROFILE, INCOMING_REQUESTS, COMPLETED_TODAY, DELIVERY_HISTORY,
-  WEEKLY_EARNINGS, EARNINGS_TOTALS, loadRiderProfile, saveRiderProfile,
+  RIDER_PROFILE, WEEKLY_EARNINGS, EARNINGS_TOTALS,
+  loadRiderProfile, saveRiderProfile,
 } from "../riderData";
 
-const STAGES = ["Accepted", "Picked up", "Delivered"];
+// Client-side-only stepper shown once a rider has accepted an order.
+// The DB only tracks "On the way" while a delivery is in progress; the
+// pickup checkpoint is a local UI step before calling /complete.
+const STAGES = ["Picked up", "Delivered"];
+
 const TABS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "earnings", label: "Earnings", icon: Wallet },
@@ -28,39 +46,84 @@ const TABS = [
   { key: "profile", label: "Edit profile", icon: User },
 ];
 
+const POLL_MS = 8000;
+
 export function RiderDashboardPage({ theme, goTo, rider, onLogout }) {
   const baseProfile = rider || RIDER_PROFILE;
+  const riderId = baseProfile.id;
+
   const [savedProfile, setSavedProfile] = useState(() => loadRiderProfile(baseProfile));
   const handleProfileSave = (updated) => {
     setSavedProfile(updated);
     saveRiderProfile(updated);
   };
+
   const [tab, setTab] = useState("overview");
   const [online, setOnline] = useState(true);
-  const [requests, setRequests] = useState(INCOMING_REQUESTS);
-  const [active, setActive] = useState(null); // { ...request, stageIndex }
-  const [completed, setCompleted] = useState(COMPLETED_TODAY);
 
-  const todayEarnings = completed.reduce((s, d) => s + d.payout, 0);
+  const [requests, setRequests] = useState([]);      // orders "Ready for pickup", unclaimed
+  const [active, setActive] = useState(null);        // this rider's current "On the way" order, or null
+  const [completed, setCompleted] = useState([]);     // this rider's "Delivered" history
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [available, activeOrder, history] = await Promise.all([
+        api.getAvailableOrders(),
+        api.getActiveOrder(riderId),
+        api.getRiderHistory(riderId),
+      ]);
+      setRequests(available);
+      // Preserve the local _pickedUp flag across polls so the stepper
+      // doesn't reset mid-delivery just because a poll refetched the order.
+      setActive((prev) =>
+        activeOrder ? { ...activeOrder, _pickedUp: prev?.id === activeOrder.id ? prev._pickedUp : false } : null
+      );
+      setCompleted(history);
+      setLoadError(null);
+    } catch (e) {
+      console.error("Failed to refresh rider dashboard:", e);
+      setLoadError(e.message || "Couldn't load your dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  }, [riderId]);
+
+  useEffect(() => {
+    refresh();
+    const t = setInterval(refresh, POLL_MS);
+    return () => clearInterval(t);
+  }, [refresh]);
+
+  const todayEarnings = completed.reduce((s, d) => s + Number(d.payout || 0), 0);
   const weekEarnings = WEEKLY_EARNINGS.reduce((s, d) => s + d.amount, 0) + todayEarnings;
   const distanceToday = (completed.length * 2.7).toFixed(1);
 
-  const acceptRequest = (req) => {
-    setActive({ ...req, stageIndex: 0 });
-    setRequests((rs) => rs.filter((r) => r.id !== req.id));
+  const acceptRequest = async (req) => {
+    try {
+      const order = await api.acceptOrder(riderId, req.id);
+      setActive({ ...order, _pickedUp: false });
+      setRequests((rs) => rs.filter((r) => r.id !== req.id));
+    } catch (e) {
+      alert(e.message || "Someone else already accepted this order.");
+      refresh();
+    }
   };
   const declineRequest = (id) => setRequests((rs) => rs.filter((r) => r.id !== id));
 
-  const advanceStage = () => {
+  const advanceStage = async () => {
     if (!active) return;
-    if (active.stageIndex < STAGES.length - 1) {
-      setActive({ ...active, stageIndex: active.stageIndex + 1 });
-    } else {
-      setCompleted((c) => [
-        { id: active.id, customer: active.customer, items: active.items, payout: active.payout, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
-        ...c,
-      ]);
+    if (!active._pickedUp) {
+      setActive({ ...active, _pickedUp: true });
+      return;
+    }
+    try {
+      await api.completeOrder(riderId, active.id);
       setActive(null);
+      refresh();
+    } catch (e) {
+      console.error("Failed to complete order:", e);
     }
   };
 
@@ -127,22 +190,30 @@ export function RiderDashboardPage({ theme, goTo, rider, onLogout }) {
         </div>
 
         <div>
-          {tab === "overview" && (
-            <OverviewTab
-              theme={theme} online={online} setOnline={setOnline}
-              requests={requests} acceptRequest={acceptRequest} declineRequest={declineRequest}
-              active={active} advanceStage={advanceStage} completed={completed}
-              todayEarnings={todayEarnings} distanceToday={distanceToday} rating={savedProfile.rating}
-            />
-          )}
-          {tab === "earnings" && (
-            <EarningsTab theme={theme} todayEarnings={todayEarnings} weekEarnings={weekEarnings} completed={completed} />
-          )}
-          {tab === "history" && (
-            <HistoryTab theme={theme} completed={completed} />
-          )}
-          {tab === "profile" && (
-            <ProfileTab theme={theme} profile={savedProfile} onSave={handleProfileSave} />
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: theme.sub }}>Loading…</div>
+          ) : loadError ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: C.danger }}>{loadError}</div>
+          ) : (
+            <>
+              {tab === "overview" && (
+                <OverviewTab
+                  theme={theme} online={online} setOnline={setOnline}
+                  requests={requests} acceptRequest={acceptRequest} declineRequest={declineRequest}
+                  active={active} advanceStage={advanceStage} completed={completed}
+                  todayEarnings={todayEarnings} distanceToday={distanceToday} rating={savedProfile.rating}
+                />
+              )}
+              {tab === "earnings" && (
+                <EarningsTab theme={theme} todayEarnings={todayEarnings} weekEarnings={weekEarnings} completed={completed} />
+              )}
+              {tab === "history" && (
+                <HistoryTab theme={theme} completed={completed} />
+              )}
+              {tab === "profile" && (
+                <ProfileTab theme={theme} profile={savedProfile} onSave={handleProfileSave} />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -176,34 +247,39 @@ function OverviewTab({ theme, online, setOnline, requests, acceptRequest, declin
           <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 18, padding: 24, marginBottom: 32 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
               <div style={{ fontSize: 15, fontWeight: 700 }}>Active delivery · {active.id}</div>
-              <Badge tone="accent">{active.eta} away</Badge>
+              <Badge tone="accent">In progress</Badge>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", position: "relative", marginBottom: 26 }}>
               <div style={{ position: "absolute", top: 16, left: "12%", right: "12%", height: 2, background: theme.border }} />
-              <div style={{ position: "absolute", top: 16, left: "12%", width: `${(active.stageIndex / (STAGES.length - 1)) * 76}%`, height: 2, background: C.primary, transition: "width 0.3s" }} />
-              {STAGES.map((label, i) => (
-                <div key={label} style={{ position: "relative", zIndex: 1, textAlign: "center", flex: 1 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: "50%", margin: "0 auto 8px", display: "flex", alignItems: "center", justifyContent: "center", background: i <= active.stageIndex ? C.primary : theme.card, border: `2px solid ${i <= active.stageIndex ? C.primary : theme.border}` }}>
-                    {i < active.stageIndex ? <Check size={14} color="#fff" /> : <span style={{ fontSize: 12, fontWeight: 800, color: i <= active.stageIndex ? "#fff" : theme.sub }}>{i + 1}</span>}
+              <div style={{ position: "absolute", top: 16, left: "12%", width: active._pickedUp ? "76%" : "0%", height: 2, background: C.primary, transition: "width 0.3s" }} />
+              {STAGES.map((label, i) => {
+                const doneIndex = active._pickedUp ? 1 : 0; // 0 = at "Picked up", 1 = at "Delivered"
+                const isDone = i <= doneIndex - 1;
+                const isCurrent = i === doneIndex;
+                return (
+                  <div key={label} style={{ position: "relative", zIndex: 1, textAlign: "center", flex: 1 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: "50%", margin: "0 auto 8px", display: "flex", alignItems: "center", justifyContent: "center", background: isDone || isCurrent ? C.primary : theme.card, border: `2px solid ${isDone || isCurrent ? C.primary : theme.border}` }}>
+                      {isDone ? <Check size={14} color="#fff" /> : <span style={{ fontSize: 12, fontWeight: 800, color: isDone || isCurrent ? "#fff" : theme.sub }}>{i + 1}</span>}
+                    </div>
+                    <div style={{ fontSize: 11.5, fontWeight: 700, color: isCurrent ? C.primary : theme.text }}>{label}</div>
                   </div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: i === active.stageIndex ? C.primary : theme.text }}>{label}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }} className="qm-detail-grid">
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><MapPin size={15} color={C.primary} /></div>
                 <div>
-                  <div style={{ fontSize: 11.5, color: theme.sub, fontWeight: 600 }}>Pickup</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>{active.pharmacy}</div>
+                  <div style={{ fontSize: 11.5, color: theme.sub, fontWeight: 600 }}>Order</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{active.id} <span style={{ color: theme.sub, fontWeight: 500 }}>· {active.order_date}</span></div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Navigation size={15} color="#047857" /></div>
                 <div>
                   <div style={{ fontSize: 11.5, color: theme.sub, fontWeight: 600 }}>Drop-off</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>{active.customer}</div>
-                  <div style={{ fontSize: 12, color: theme.sub }}>{active.address}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{active.customer_name || "Customer"}</div>
+                  <div style={{ fontSize: 12, color: theme.sub }}>{active.address || "No address on file"}</div>
                 </div>
               </div>
             </div>
@@ -211,7 +287,7 @@ function OverviewTab({ theme, online, setOnline, requests, acceptRequest, declin
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <div style={{ fontSize: 15, fontWeight: 800 }}>৳{active.payout} <span style={{ fontSize: 12, color: theme.sub, fontWeight: 500 }}>payout</span></div>
               <button onClick={advanceStage} className="qm-btn" style={{ background: C.primary, color: "#fff", border: "none", padding: "12px 22px", borderRadius: 12, fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
-                {active.stageIndex < STAGES.length - 1 ? `Mark as ${STAGES[active.stageIndex + 1]}` : "Complete delivery"}
+                {!active._pickedUp ? "Mark as Picked up" : "Complete delivery"}
               </button>
             </div>
           </div>
@@ -232,7 +308,7 @@ function OverviewTab({ theme, online, setOnline, requests, acceptRequest, declin
         </div>
       ) : requests.length === 0 ? (
         <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 16, padding: 28, textAlign: "center", fontSize: 13, color: theme.sub }}>
-          No requests right now — new ones will show up here.
+          No requests right now — new ones will show up here once a store marks an order "Ready for pickup".
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -241,12 +317,13 @@ function OverviewTab({ theme, online, setOnline, requests, acceptRequest, declin
               <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 16, padding: 18, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                 <div style={{ width: 42, height: 42, borderRadius: 10, background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Package size={19} color={C.primary} /></div>
                 <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700 }}>{req.pharmacy} <span style={{ color: theme.sub, fontWeight: 500 }}>→ {req.customer}</span></div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700 }}>{req.id} <span style={{ color: theme.sub, fontWeight: 500 }}>→ {req.customer_name || "Customer"}</span></div>
                   <div style={{ fontSize: 12, color: theme.sub, marginTop: 2 }}>{req.items}</div>
-                  <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11.5, color: theme.sub }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={12} /> {req.distance}</span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Clock size={12} /> {req.eta}</span>
-                  </div>
+                  {req.address && (
+                    <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11.5, color: theme.sub }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={12} /> {req.address}</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 800, whiteSpace: "nowrap" }}>৳{req.payout}</div>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -305,11 +382,11 @@ function EarningsTab({ theme, todayEarnings, weekEarnings, completed }) {
           {completed.map((d) => (
             <div key={d.id} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{d.id} <span style={{ color: theme.sub, fontWeight: 500 }}>· {d.customer}</span></div>
+                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{d.id} <span style={{ color: theme.sub, fontWeight: 500 }}>· {d.customer_name || "Customer"}</span></div>
                 <div style={{ fontSize: 12, color: theme.sub }}>{d.items}</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <span style={{ fontSize: 12, color: theme.sub }}>{d.time}</span>
+                <span style={{ fontSize: 12, color: theme.sub }}>{d.order_date}</span>
                 <span style={{ fontSize: 13.5, fontWeight: 700 }}>৳{d.payout}</span>
               </div>
             </div>
@@ -322,30 +399,32 @@ function EarningsTab({ theme, todayEarnings, weekEarnings, completed }) {
 
 /* ---------- Delivery history ---------- */
 function HistoryTab({ theme, completed }) {
-  const todayRows = completed.map((d) => ({ ...d, date: "Today" }));
-  const allRows = [...todayRows, ...DELIVERY_HISTORY];
   return (
     <>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>All deliveries</div>
-      <div style={{ fontSize: 12.5, color: theme.sub, marginBottom: 18 }}>{allRows.length} deliveries · ৳{allRows.reduce((s, d) => s + d.payout, 0).toLocaleString()} earned</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {allRows.map((d, i) => (
-          <div key={`${d.id}-${i}`} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 9, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Check size={15} color="#047857" /></div>
-              <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{d.id} <span style={{ color: theme.sub, fontWeight: 500 }}>· {d.customer}</span></div>
-                <div style={{ fontSize: 12, color: theme.sub }}>{d.items}</div>
+      <div style={{ fontSize: 12.5, color: theme.sub, marginBottom: 18 }}>{completed.length} deliveries · ৳{completed.reduce((s, d) => s + Number(d.payout || 0), 0).toLocaleString()} earned</div>
+      {completed.length === 0 ? (
+        <div style={{ fontSize: 13, color: theme.sub }}>No deliveries yet — completed orders will show up here.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {completed.map((d) => (
+            <div key={d.id} style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Check size={15} color="#047857" /></div>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700 }}>{d.id} <span style={{ color: theme.sub, fontWeight: 500 }}>· {d.customer_name || "Customer"}</span></div>
+                  <div style={{ fontSize: 12, color: theme.sub }}>{d.items}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <span style={{ fontSize: 12, color: theme.sub }}>{d.order_date}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 700 }}>৳{d.payout}</span>
+                <Badge tone="secondary">Delivered</Badge>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <span style={{ fontSize: 12, color: theme.sub }}>{d.date}</span>
-              <span style={{ fontSize: 13.5, fontWeight: 700 }}>৳{d.payout}</span>
-              <Badge tone="secondary">Delivered</Badge>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }

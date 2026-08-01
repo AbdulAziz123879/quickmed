@@ -1,3 +1,5 @@
+
+
 /* StoreApp.jsx
    Standalone medical store / pharmacy partner portal. Reached via /store,
    completely separate from the customer site and from /admin — mirrors
@@ -8,14 +10,19 @@
      - see new orders as they come in (polls the backend every 8s and
        flags anything newer than what they've already seen)
      - see total orders and total sales
-     - move an order forward (Placed -> Preparing -> On the way -> Delivered)
+     - move an order forward (Placed -> Preparing -> Ready for pickup ->
+       On the way -> Delivered)
+
+   "Ready for pickup" is the stage that makes an order visible to riders
+   on the rider dashboard — see RiderDashboardPage.jsx and the
+   RIDER ORDER FLOW section of server.js.
 
    NOTE ON SCOPE: orders aren't yet linked to a specific store in this
    app's data model (single shared catalog, no "which pharmacy" step at
-   checkout) — see the comment in server_store_portal_additions.js. So
-   right now every store portal shows the same shared order stream. The
-   UI below is written so that once orders carry a store_id, only the
-   backend query needs to change — nothing here does.
+   checkout) — see the comment in server.js. So right now every store
+   portal shows the same shared order stream. The UI below is written so
+   that once orders carry a store_id, only the backend query needs to
+   change — nothing here does.
 */
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -25,6 +32,11 @@ import { C } from "./theme";
 
 const API_BASE_URL = "http://localhost:5000";
 const POLL_MS = 8000;
+
+// Full lifecycle an order moves through. "Ready for pickup" is the
+// hand-off point to riders — once an order reaches this stage it
+// disappears from any rider's request feed once one of them accepts it.
+const STATUS_FLOW = ["Placed", "Preparing", "Ready for pickup", "On the way", "Delivered"];
 
 export default function StoreApp() {
   const [session, setSession] = useState(null); // { token, store }
@@ -128,7 +140,6 @@ const iconBtn = {
 };
 
 /* ---------- Dashboard ---------- */
-const STATUS_FLOW = ["Placed", "Preparing", "On the way", "Delivered"];
 const lastSeenKey = (storeId) => `quickmed_store_last_seen_${storeId}`;
 
 function StoreDashboard({ session, onLogout }) {
@@ -296,7 +307,11 @@ function statusColor(status) {
 
 function OrderRow({ order, isNew, onAdvance }) {
   const sc = statusColor(order.status);
-  const isFinal = (order.status || "").toLowerCase() === "delivered" || (order.status || "").toLowerCase() === "cancelled";
+  const statusLower = (order.status || "").toLowerCase();
+  const isFinal = statusLower === "delivered" || statusLower === "cancelled";
+  // First stage gets a "Confirm order" label instead of the generic
+  // "Next stage" — it's the store acknowledging a brand-new order.
+  const nextLabel = statusLower === "placed" ? "Confirm order" : "Next stage";
 
   return (
     <div style={{
@@ -312,17 +327,21 @@ function OrderRow({ order, isNew, onAdvance }) {
           {isNew && <span style={{ background: "#F87171", color: "#fff", fontSize: 10, fontWeight: 800, borderRadius: 999, padding: "2px 8px" }}>NEW</span>}
         </div>
         <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>{order.items}</div>
+        {(order.customer_name || order.address) && (
+          <div style={{ fontSize: 11.5, color: "#64748B", marginTop: 2 }}>
+            {order.customer_name}{order.customer_name && order.address ? " · " : ""}{order.address}
+          </div>
+        )}
       </div>
       <div style={{ fontSize: 14, fontWeight: 800 }}>৳{order.total}</div>
       <span style={{ background: sc.bg, color: sc.fg, fontSize: 11.5, fontWeight: 700, padding: "5px 12px", borderRadius: 999, whiteSpace: "nowrap" }}>{order.status}</span>
       {!isFinal && (
-      
         <button
           onClick={() => onAdvance(order)}
           style={{ display: "flex", alignItems: "center", gap: 6, background: C.primary, color: "#fff", border: "none", padding: "8px 14px", borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-       >
-         <Check size={13} /> {(order.status || "").toLowerCase() === "placed" ? "Confirm order" : "Next stage"}
-          </button>
+        >
+          <Check size={13} /> {nextLabel}
+        </button>
       )}
     </div>
   );

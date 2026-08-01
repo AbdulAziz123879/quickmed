@@ -1,7 +1,5 @@
 
 
-
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -157,7 +155,7 @@ app.get("/api/medicines/:id", async (req, res) => {
 });
 
 /* =========================================================
-   RIDERS
+   RIDERS (auth + profile)
 ========================================================= */
 
 /* POST /api/riders/login
@@ -262,6 +260,37 @@ app.post("/api/customers/register", async (req, res) => {
   }
 });
 
+/* POST /api/customers/login
+   Body: { email, password }
+   Looks up a customer by email (case-insensitive) and verifies the
+   bcrypt hash. Returns the public profile (no password) on success. */
+app.post("/api/customers/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email?.trim() || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT * FROM customers WHERE LOWER(email) = LOWER($1)",
+      [email.trim()]
+    );
+    if (rows.length === 0) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const match = await bcrypt.compare(password, rows[0].password);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const { password: _pw, ...profile } = rows[0];
+    res.json(profile);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/customers/login error:", err);
+    res.status(500).json({ error: "Failed to authenticate." });
+  }
+});
 
 /* =========================================================
    ADMIN
@@ -406,6 +435,7 @@ app.get("/api/admin/customers", requireAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch customers." });
   }
 });
+
 /* GET /api/admin/orders — all orders */
 app.get("/api/admin/orders", requireAdmin, async (req, res) => {
   try {
@@ -503,8 +533,7 @@ app.delete("/api/admin/medical-stores/:id", requireAdmin, async (req, res) => {
    medical store (there's a single shared medicine catalog, and
    checkout doesn't ask "which pharmacy"). So for now every store's
    portal shows the full shared order stream / totals, same as the
-   admin Orders tab — this is the simplest correct thing until orders
-   carry a store_id. To scope this later: add a store_id column to
+   admin Orders tab. To scope this later: add a store_id column to
    orders (and to medicines), set it when an order is created, and
    filter every query below by `WHERE store_id = $storeId`.
 ========================================================= */
@@ -583,7 +612,9 @@ app.get("/api/stores/orders", requireStore, async (req, res) => {
 
 /* PATCH /api/stores/orders/:id/status
    Body: { status } — lets the store move an order along
-   (Placed -> Preparing -> On the way -> Delivered), or Cancelled. */
+   (Placed -> Preparing -> Ready for pickup -> On the way -> Delivered),
+   or Cancelled. "Ready for pickup" is what makes an order visible to
+   riders — see the RIDER ORDER FLOW section below. */
 app.patch("/api/stores/orders/:id/status", requireStore, async (req, res) => {
   try {
     const { status } = req.body || {};
@@ -604,35 +635,99 @@ app.patch("/api/stores/orders/:id/status", requireStore, async (req, res) => {
   }
 });
 
-/* POST /api/customers/login
-   Body: { email, password }
-   Looks up a customer by email (case-insensitive) and verifies the
-   bcrypt hash. Returns the public profile (no password) on success. */
-app.post("/api/customers/login", async (req, res) => {
-  try {
-    const { email, password } = req.body || {};
-    if (!email?.trim() || !password) {
-      return res.status(400).json({ error: "Email and password are required." });
-    }
+/* =========================================================
+   RIDER ORDER FLOW
 
+   Store confirms an order and moves it through Preparing ->
+   "Ready for pickup". Once "Ready for pickup", it's visible to any
+   online rider. A rider claims it (the accept UPDATE is atomic, so
+   two riders can't grab the same order), delivers it, then marks it
+   Delivered. Requires these columns on `orders` (see migration):
+     rider_id       VARCHAR(20) REFERENCES riders(id)
+     customer_name  VARCHAR(120)
+     address        VARCHAR(255)
+     payout         NUMERIC DEFAULT 0
+========================================================= */
+
+/* GET /api/riders/available-orders — unclaimed orders ready for pickup */
+app.get("/api/riders/available-orders", async (req, res) => {
+  try {
     const { rows } = await pool.query(
-      "SELECT * FROM customers WHERE LOWER(email) = LOWER($1)",
-      [email.trim()]
+      "SELECT * FROM orders WHERE status = 'Ready for pickup' AND rider_id IS NULL ORDER BY id"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/riders/available-orders error:", err);
+    res.status(500).json({ error: "Failed to fetch available orders." });
+  }
+});
+
+/* POST /api/riders/:riderId/orders/:orderId/accept
+   Atomically claims the order for this rider. Fails with 409 if
+   someone else already grabbed it (rider_id no longer NULL, or the
+   order moved on from "Ready for pickup"). */
+app.post("/api/riders/:riderId/orders/:orderId/accept", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE orders SET rider_id = $1, status = 'On the way'
+       WHERE id = $2 AND status = 'Ready for pickup' AND rider_id IS NULL
+       RETURNING *`,
+      [req.params.riderId, req.params.orderId]
     );
     if (rows.length === 0) {
-      return res.status(401).json({ error: "Invalid email or password." });
+      return res.status(409).json({ error: "This order was already accepted by another rider." });
     }
-
-    const match = await bcrypt.compare(password, rows[0].password);
-    if (!match) {
-      return res.status(401).json({ error: "Invalid email or password." });
-    }
-
-    const { password: _pw, ...profile } = rows[0];
-    res.json(profile);
+    res.json(rows[0]);
   } catch (err) {
-    console.error("[quickmed-backend] /api/customers/login error:", err);
-    res.status(500).json({ error: "Failed to authenticate." });
+    console.error("[quickmed-backend] accept order error:", err);
+    res.status(500).json({ error: "Failed to accept order." });
+  }
+});
+
+/* GET /api/riders/:riderId/active-order — this rider's current in-progress delivery, if any */
+app.get("/api/riders/:riderId/active-order", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM orders WHERE rider_id = $1 AND status = 'On the way' ORDER BY id DESC LIMIT 1",
+      [req.params.riderId]
+    );
+    res.json(rows[0] || null);
+  } catch (err) {
+    console.error("[quickmed-backend] active-order error:", err);
+    res.status(500).json({ error: "Failed to fetch active order." });
+  }
+});
+
+/* POST /api/riders/:riderId/orders/:orderId/complete — mark delivered */
+app.post("/api/riders/:riderId/orders/:orderId/complete", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE orders SET status = 'Delivered'
+       WHERE id = $1 AND rider_id = $2
+       RETURNING *`,
+      [req.params.orderId, req.params.riderId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Order not found for this rider." });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("[quickmed-backend] complete order error:", err);
+    res.status(500).json({ error: "Failed to complete order." });
+  }
+});
+
+/* GET /api/riders/:riderId/history — every delivered order for this rider, newest first */
+app.get("/api/riders/:riderId/history", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM orders WHERE rider_id = $1 AND status = 'Delivered' ORDER BY id DESC",
+      [req.params.riderId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("[quickmed-backend] rider history error:", err);
+    res.status(500).json({ error: "Failed to fetch delivery history." });
   }
 });
 
@@ -651,20 +746,22 @@ app.get("/api/orders", async (req, res) => {
 });
 
 /* POST /api/orders
-   Body: { id, items, total }
-   Creates a new order (called from CheckoutPage after "Place order"). */
+   Body: { id, items, total, customerName?, address? }
+   Creates a new order (called from CheckoutPage after "Place order").
+   payout is set to a flat ৳25 delivery fee for now — replace with
+   distance-based logic later if needed. */
 app.post("/api/orders", async (req, res) => {
   try {
-    const { id, items, total } = req.body || {};
+    const { id, items, total, customerName, address } = req.body || {};
     if (!id || !items || total == null) {
       return res.status(400).json({ error: "id, items, and total are required." });
     }
     const orderDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
     const { rows } = await pool.query(
-      `INSERT INTO orders (id, order_date, items, total, status)
-       VALUES ($1, $2, $3, $4, 'Placed')
+      `INSERT INTO orders (id, order_date, items, total, status, customer_name, address, payout)
+       VALUES ($1, $2, $3, $4, 'Placed', $5, $6, $7)
        RETURNING *`,
-      [id, orderDate, items, total]
+      [id, orderDate, items, total, customerName || null, address || null, 25]
     );
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -674,7 +771,7 @@ app.post("/api/orders", async (req, res) => {
 });
 
 /* =========================================================
-   PRESCRIPTION READER (unchanged)
+   PRESCRIPTION READER
 ========================================================= */
 
 app.post("/api/prescription/read", async (req, res) => {
@@ -751,7 +848,7 @@ app.post("/api/prescription/read", async (req, res) => {
 });
 
 /* =========================================================
-   CHATBOT (unchanged, catalog now built from DB)
+   CHATBOT (catalog built fresh from DB)
 ========================================================= */
 
 app.post("/api/chat", async (req, res) => {
