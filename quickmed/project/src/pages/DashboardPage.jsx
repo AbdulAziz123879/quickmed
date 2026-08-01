@@ -74,14 +74,19 @@ export function DashboardPage({ theme, cart, wishlist, goTo, addToCart, customer
             </Reveal>
           ))}
         </div>
-        <Reveal>
+        {/* <Reveal>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 32 }}>
             <PrescriptionUploadButton theme={theme} variant="pill" addToCart={addToCart} />
             {[{ label: "AI scanner", icon: ScanLine }, { label: "Emergency order", icon: Siren }, { label: "Refill medicine", icon: Package }].map((a) => (
               <button key={a.label} className="qm-btn" style={{ display: "flex", alignItems: "center", gap: 8, background: theme.card, border: `1px solid ${theme.border}`, padding: "12px 18px", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", color: theme.text }}><a.icon size={15} color={C.primary} /> {a.label}</button>
             ))}
           </div>
-        </Reveal>
+        </Reveal> */}
+        <Reveal>
+  <div style={{ display: "flex", justifyContent: "center", marginBottom: 36 }}>
+    <PrescriptionUploadButton theme={theme} variant="button" label="Upload Prescription" addToCart={addToCart} />
+  </div>
+</Reveal>
         <Reveal>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Recent orders</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

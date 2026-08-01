@@ -1,6 +1,7 @@
 
 
 
+
 /* App.jsx
    Root component — handles routing between pages, theme and global state.
 */
@@ -40,7 +41,7 @@ export default function QuickMedApp() {
   const [cart, setCart] = useState([]);
   const [history, setHistory] = useState([]);
   const [rider, setRider] = useState(null);
-  const [customer, setCustomer] = useState(null); 
+  const [customer, setCustomer] = useState(null);
   const pageRef = useRef(page);
   const selectedMedicineRef = useRef(selectedMedicine);
   useEffect(() => { pageRef.current = page; }, [page]);
@@ -82,12 +83,11 @@ export default function QuickMedApp() {
     goTo("home");
   }, [goTo]);
 
-
   const handleCustomerLogin = useCallback((c) => setCustomer(c), []);
   const handleCustomerLogout = useCallback(() => {
-   setCustomer(null);
+    setCustomer(null);
     goTo("home");
-},   [goTo]);
+  }, [goTo]);
 
   const addToCart = useCallback((m, qty = 1) => {
     setCart((c) => {
@@ -174,19 +174,59 @@ export default function QuickMedApp() {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <button onClick={() => setDark(!dark)} className="qm-btn" style={{ background: "none", border: "none", cursor: "pointer", color: theme.sub, display: "flex" }} aria-label="Toggle theme">{dark ? <SunIcon size={19} /> : <Moon size={19} />}</button>
-              <button onClick={() => goTo("cart")} className="qm-btn" style={{ background: "none", border: "none", cursor: "pointer", color: theme.text, position: "relative", display: "flex" }} aria-label="Cart">
-                <ShoppingCart size={20} />
-                {cartCount > 0 && <span style={{ position: "absolute", top: -6, right: -6, background: C.danger, color: "#fff", fontSize: 9.5, fontWeight: 700, borderRadius: 999, width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>}
-              </button>
-              <button onClick={() => goTo("login")} className="qm-desktop-only" style={{ fontSize: 14.5, fontWeight: 700, color: theme.text, background: "none", border: "none", cursor: "pointer" }}>Login</button>
-              <button onClick={() => goTo("register")} className="qm-btn" style={{ background: C.primary, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 999, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>Register</button>
+            
+             <button onClick={() => goTo("cart")} className="qm-btn" style={{ background: dark ? "rgba(6,182,212,0.14)" : "#ECFEFF", border: "none", cursor: "pointer", color: C.accent, position: "relative", display: "flex", padding: 9, borderRadius: 10 }} aria-label="Cart">
+                 <ShoppingCart size={19} />
+                   {cartCount > 0 && <span style={{ position: "absolute", top: -4, right: -4, background: C.danger, color: "#fff", fontSize: 9.5, fontWeight: 700, borderRadius: 999, width: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>} 
+                   </button>
+
+              {customer ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="qm-desktop-only">
+                  <button
+                    onClick={() => goTo("dashboard")}
+                    className="qm-btn"
+                    style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "rgba(255,255,255,0.06)" : "#F1F5F9", border: "none", padding: "8px 16px 8px 8px", borderRadius: 999, cursor: "pointer" }}
+                  >
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 11, flexShrink: 0 }}>
+                      {(customer.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: theme.text }}>{customer.name?.split(" ")[0] || "Account"}</span>
+                  </button>
+                 
+                  <button
+                   onClick={handleCustomerLogout}
+                   className="qm-btn"
+                   style={{ background: dark ? "rgba(239,68,68,0.14)" : "#FEF2F2", border: "none", color: C.danger, padding: "9px 18px", borderRadius: 999, fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}
+                  >
+                      Log out   
+                     </button>
+                </div>
+              ) : (
+                <>
+                  <button onClick={() => goTo("login")} className="qm-desktop-only" style={{ fontSize: 14.5, fontWeight: 700, color: theme.text, background: "none", border: "none", cursor: "pointer" }}>Login</button>
+                  <button onClick={() => goTo("register")} className="qm-btn" style={{ background: C.primary, color: "#fff", border: "none", padding: "11px 22px", borderRadius: 999, fontSize: 14.5, fontWeight: 700, cursor: "pointer" }}>Register</button>
+                </>
+              )}
+
               <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", display: "none" }} className="qm-hamburger" aria-label="Menu">{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
             </div>
           </div>
           {menuOpen && (
             <div style={{ position: "relative", padding: "15px 26px 22px", display: "flex", flexDirection: "column", gap: 16, borderTop: `1px solid ${theme.border}` }}>
-              {[...NAV_ITEMS, { label: "Login", page: "login" }, { label: "Dashboard", page: "dashboard" }, { label: "Ride with us", page: rider ? "riderDashboard" : "riderLogin" }].map((item) => (
-                <button key={item.label} onClick={() => goTo(item.page)} style={{ fontSize: 15, fontWeight: 600, color: theme.text, background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>{item.label}</button>
+              {[
+                ...NAV_ITEMS,
+                ...(customer
+                  ? [{ label: "Dashboard", page: "dashboard" }, { label: `Log out (${customer.name?.split(" ")[0] || "Account"})`, action: "logout" }]
+                  : [{ label: "Login", page: "login" }]),
+                { label: "Ride with us", page: rider ? "riderDashboard" : "riderLogin" },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => (item.action === "logout" ? handleCustomerLogout() : goTo(item.page))}
+                  style={{ fontSize: 15, fontWeight: 600, color: theme.text, background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+                >
+                  {item.label}
+                </button>
               ))}
             </div>
           )}
