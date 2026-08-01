@@ -1,6 +1,7 @@
 
 
 
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -433,24 +434,39 @@ app.get("/api/admin/medical-stores", requireAdmin, async (req, res) => {
 });
 
 /* POST /api/admin/medical-stores
-   Body: { name, address, phone, email, licenseNumber, status } — only
-   'name' is required. Adds a new pharmacy/medical store partner. */
+   Body: { name, address, phone, email, password, licenseNumber, status }
+   'name', 'email' and 'password' are required — email + password become
+   the store's login for their own Store Partner Portal (see
+   POST /api/stores/login below). */
 app.post("/api/admin/medical-stores", requireAdmin, async (req, res) => {
   try {
-    const { name, address, phone, email, licenseNumber, status } = req.body || {};
-    if (!name?.trim()) {
-      return res.status(400).json({ error: "Store name is required." });
+    const { name, address, phone, email, password, licenseNumber, status } = req.body || {};
+    if (!name?.trim() || !email?.trim() || !password) {
+      return res.status(400).json({ error: "Store name, email and password are required." });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters." });
     }
 
+    const existing = await pool.query(
+      "SELECT id FROM medical_stores WHERE LOWER(email) = LOWER($1)",
+      [email.trim()]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: "A store with this email already exists." });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
-      `INSERT INTO medical_stores (name, address, phone, email, license_number, status)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
+      `INSERT INTO medical_stores (name, address, phone, email, password, license_number, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, name, address, phone, email, license_number, status, created_at`,
       [
         name.trim(),
         address?.trim() || null,
         phone?.trim() || null,
-        email?.trim() || null,
+        email.trim(),
+        hashed,
         licenseNumber?.trim() || null,
         status?.trim() || "Active",
       ]
@@ -477,6 +493,114 @@ app.delete("/api/admin/medical-stores/:id", requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("[quickmed-backend] DELETE /api/admin/medical-stores/:id error:", err);
     res.status(500).json({ error: "Failed to delete medical store." });
+  }
+});
+
+/* =========================================================
+   STORE PORTAL
+
+   NOTE ON SCOPE: orders in this app aren't yet linked to a specific
+   medical store (there's a single shared medicine catalog, and
+   checkout doesn't ask "which pharmacy"). So for now every store's
+   portal shows the full shared order stream / totals, same as the
+   admin Orders tab — this is the simplest correct thing until orders
+   carry a store_id. To scope this later: add a store_id column to
+   orders (and to medicines), set it when an order is created, and
+   filter every query below by `WHERE store_id = $storeId`.
+========================================================= */
+
+const validStoreTokens = new Map(); // token -> { id, name, email, ... }
+
+function requireStore(req, res, next) {
+  const token = req.headers["x-store-token"];
+  const store = token && validStoreTokens.get(token);
+  if (!store) {
+    return res.status(401).json({ error: "Not authorized." });
+  }
+  req.store = store;
+  next();
+}
+
+/* POST /api/stores/login
+   Body: { email, password }
+   Looks up a medical store by email and verifies the bcrypt hash.
+   Returns { token, store } on success. */
+app.post("/api/stores/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email?.trim() || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT * FROM medical_stores WHERE LOWER(email) = LOWER($1)",
+      [email.trim()]
+    );
+    if (rows.length === 0 || !rows[0].password) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const match = await bcrypt.compare(password, rows[0].password);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const { password: _pw, ...profile } = rows[0];
+    const token = crypto.randomBytes(24).toString("hex");
+    validStoreTokens.set(token, profile);
+
+    res.json({ token, store: profile });
+  } catch (err) {
+    console.error("[quickmed-backend] /api/stores/login error:", err);
+    res.status(500).json({ error: "Failed to authenticate." });
+  }
+});
+
+app.post("/api/stores/logout", requireStore, (req, res) => {
+  const token = req.headers["x-store-token"];
+  validStoreTokens.delete(token);
+  res.json({ ok: true });
+});
+
+/* GET /api/stores/orders
+   Returns { orders, totalOrders, totalSales } for the logged-in store's
+   dashboard. totalSales excludes cancelled orders; totalOrders counts
+   everything. See the scope note above. */
+app.get("/api/stores/orders", requireStore, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM orders ORDER BY id DESC");
+    const totalOrders = rows.length;
+    const totalSales = rows
+      .filter((o) => (o.status || "").toLowerCase() !== "cancelled")
+      .reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+    res.json({ orders: rows, totalOrders, totalSales });
+  } catch (err) {
+    console.error("[quickmed-backend] /api/stores/orders error:", err);
+    res.status(500).json({ error: "Failed to fetch orders." });
+  }
+});
+
+/* PATCH /api/stores/orders/:id/status
+   Body: { status } — lets the store move an order along
+   (Placed -> Preparing -> On the way -> Delivered), or Cancelled. */
+app.patch("/api/stores/orders/:id/status", requireStore, async (req, res) => {
+  try {
+    const { status } = req.body || {};
+    if (!status?.trim()) {
+      return res.status(400).json({ error: "Status is required." });
+    }
+    const { rows } = await pool.query(
+      "UPDATE orders SET status = $1 WHERE id = $2 RETURNING *",
+      [status.trim(), req.params.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("[quickmed-backend] PATCH /api/stores/orders/:id/status error:", err);
+    res.status(500).json({ error: "Failed to update order status." });
   }
 });
 

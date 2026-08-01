@@ -1,20 +1,22 @@
+
+
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // import "./styles/index.css";
 
 import App from './App.jsx'
 import AdminApp from './AdminApp.jsx'
+import StoreApp from './StoreApp.jsx'
 
-// createRoot(document.getElementById('root')).render(
-//   <StrictMode>
-//     <App />
-//   </StrictMode>,
-// )
 
-const isAdminRoute = window.location.pathname.startsWith('/admin')
+
+const path = window.location.pathname
+const isAdminRoute = path.startsWith('/admin')
+const isStoreRoute = path.startsWith('/store')
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {isAdminRoute ? <AdminApp /> : <App />}
+    {isAdminRoute ? <AdminApp /> : isStoreRoute ? <StoreApp /> : <App />}
   </StrictMode>,
 )
