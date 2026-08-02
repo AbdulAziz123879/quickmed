@@ -1,3 +1,2 @@
 
-for databse sql
-docker exec -it quickmed-db psql -U postgres -d quickmed 
+docker exec -it quickmed-db psql -U postgres -d quickmed for databse sql

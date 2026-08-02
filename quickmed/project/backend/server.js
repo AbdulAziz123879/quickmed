@@ -1,5 +1,3 @@
-
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -16,7 +14,8 @@ app.use(express.json({ limit: "15mb" }));
 
 const PORT = process.env.PORT || 5000;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
+const OPENROUTER_MODEL =
+  process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 const OPENROUTER_HEADERS = (extra = {}) => ({
@@ -30,7 +29,7 @@ const OPENROUTER_HEADERS = (extra = {}) => ({
 if (!OPENROUTER_API_KEY) {
   console.warn(
     "[quickmed-backend] WARNING: OPENROUTER_API_KEY is not set. " +
-    "Copy .env.example to .env and add your key before making requests."
+      "Copy .env.example to .env and add your key before making requests.",
   );
 }
 
@@ -40,10 +39,13 @@ if (!OPENROUTER_API_KEY) {
 --------------------------------------------------------------- */
 async function buildCatalogText() {
   const { rows } = await pool.query(
-    "SELECT name, tag, rx, uses FROM medicines ORDER BY id"
+    "SELECT name, tag, rx, uses FROM medicines ORDER BY id",
   );
   return rows
-    .map((m) => `- ${m.name} (${m.tag}${m.rx ? ", prescription required" : ", OTC"}): ${m.uses}`)
+    .map(
+      (m) =>
+        `- ${m.name} (${m.tag}${m.rx ? ", prescription required" : ", OTC"}): ${m.uses}`,
+    )
     .join("\n");
 }
 
@@ -74,7 +76,8 @@ function buildSystemPrompt(catalogText) {
     "always add an extra nudge toward a real pharmacist/doctor for these\n\n" +
     "Always end any self-care suggestion with a short reminder to see a doctor or pharmacist if symptoms " +
     "persist, worsen, or they're unsure. You are not a substitute for professional care.\n\n" +
-    "CURRENT CATALOG (only recommend from this list):\n" + catalogText +
+    "CURRENT CATALOG (only recommend from this list):\n" +
+    catalogText +
     "**Bold** the medicine names in the catalog list with big front than any other text"
   );
 }
@@ -124,7 +127,11 @@ function parseMedicinesFromModelOutput(rawText) {
 
 /* Simple health check so the frontend (or you) can confirm the server is up. */
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, hasApiKey: Boolean(OPENROUTER_API_KEY), model: OPENROUTER_MODEL });
+  res.json({
+    ok: true,
+    hasApiKey: Boolean(OPENROUTER_API_KEY),
+    model: OPENROUTER_MODEL,
+  });
 });
 
 /* =========================================================
@@ -137,20 +144,26 @@ app.get("/api/medicines", async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("[quickmed-backend] /api/medicines error:", err);
-    res.status(500).json({ error: "Failed to fetch medicines from the database." });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch medicines from the database." });
   }
 });
 
 app.get("/api/medicines/:id", async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM medicines WHERE id = $1", [req.params.id]);
+    const { rows } = await pool.query("SELECT * FROM medicines WHERE id = $1", [
+      req.params.id,
+    ]);
     if (rows.length === 0) {
       return res.status(404).json({ error: "Medicine not found." });
     }
     res.json(rows[0]);
   } catch (err) {
     console.error("[quickmed-backend] /api/medicines/:id error:", err);
-    res.status(500).json({ error: "Failed to fetch medicine from the database." });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch medicine from the database." });
   }
 });
 
@@ -166,12 +179,14 @@ app.post("/api/riders/login", async (req, res) => {
   try {
     const { id, password } = req.body || {};
     if (!id || !password) {
-      return res.status(400).json({ error: "Rider ID and password are required." });
+      return res
+        .status(400)
+        .json({ error: "Rider ID and password are required." });
     }
 
     const { rows } = await pool.query(
       "SELECT * FROM riders WHERE LOWER(id) = LOWER($1)",
-      [id.trim()]
+      [id.trim()],
     );
 
     if (rows.length === 0 || rows[0].password !== password) {
@@ -205,7 +220,7 @@ app.put("/api/riders/:id", async (req, res) => {
            vehicle_number = COALESCE($5, vehicle_number)
        WHERE id = $6
        RETURNING *`,
-      [name, phone, email, vehicle, vehicleNumber, req.params.id]
+      [name, phone, email, vehicle, vehicleNumber, req.params.id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: "Rider not found." });
@@ -224,25 +239,34 @@ app.put("/api/riders/:id", async (req, res) => {
    CUSTOMERS
 ========================================================= */
 
-/* POST /api/customers/register
-   Body: { name, email, phone, password }
-   Creates a new customer account with a bcrypt-hashed password. */
 app.post("/api/customers/register", async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body || {};
-    if (!name?.trim() || !email?.trim() || !password) {
-      return res.status(400).json({ error: "Name, email and password are required." });
+    // Coerce to strings so .trim() can never throw, no matter what shape
+    // the request body turns out to be.
+    const name = String(req.body?.name ?? "").trim();
+    const email = String(req.body?.email ?? "").trim();
+    const phone = String(req.body?.phone ?? "").trim();
+    const password = String(req.body?.password ?? "");
+
+    if (!name || !email || !password) {
+      return res
+        .status(400)
+        .json({ error: "Name, email and password are required." });
     }
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters." });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters." });
     }
 
     const existing = await pool.query(
       "SELECT id FROM customers WHERE LOWER(email) = LOWER($1)",
-      [email.trim()]
+      [email],
     );
     if (existing.rows.length > 0) {
-      return res.status(409).json({ error: "An account with this email already exists." });
+      return res
+        .status(409)
+        .json({ error: "An account with this email already exists." });
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -250,7 +274,7 @@ app.post("/api/customers/register", async (req, res) => {
       `INSERT INTO customers (name, email, phone, password)
        VALUES ($1, $2, $3, $4)
        RETURNING id, name, email, phone, created_at`,
-      [name.trim(), email.trim(), phone?.trim() || null, hashed]
+      [name, email, phone || null, hashed],
     );
 
     res.status(201).json(rows[0]);
@@ -268,12 +292,14 @@ app.post("/api/customers/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email?.trim() || !password) {
-      return res.status(400).json({ error: "Email and password are required." });
+      return res
+        .status(400)
+        .json({ error: "Email and password are required." });
     }
 
     const { rows } = await pool.query(
       "SELECT * FROM customers WHERE LOWER(email) = LOWER($1)",
-      [email.trim()]
+      [email.trim()],
     );
     if (rows.length === 0) {
       return res.status(401).json({ error: "Invalid email or password." });
@@ -313,12 +339,14 @@ app.post("/api/admin/login", async (req, res) => {
   try {
     const { username, password } = req.body || {};
     if (!username?.trim() || !password) {
-      return res.status(400).json({ error: "Username and password are required." });
+      return res
+        .status(400)
+        .json({ error: "Username and password are required." });
     }
 
     const { rows } = await pool.query(
       "SELECT * FROM admins WHERE LOWER(username) = LOWER($1)",
-      [username.trim()]
+      [username.trim()],
     );
     if (rows.length === 0) {
       return res.status(401).json({ error: "Invalid username or password." });
@@ -343,10 +371,24 @@ app.post("/api/admin/logout", requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-/* GET /api/admin/riders — all riders, passwords stripped */
+/* GET /api/admin/riders — all riders, passwords stripped, with delivery
+   stats (total completed deliveries + total earnings) joined in from
+   the deliveries table so the admin panel can show rider performance. */
 app.get("/api/admin/riders", requireAdmin, async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM riders ORDER BY id");
+    const { rows } = await pool.query(`
+      SELECT r.*,
+        COALESCE(d.delivery_count, 0)::int AS delivery_count,
+        COALESCE(d.total_earnings, 0)::numeric AS total_earnings
+      FROM riders r
+      LEFT JOIN (
+        SELECT rider_id, COUNT(*) AS delivery_count, SUM(payout) AS total_earnings
+        FROM deliveries
+        WHERE status = 'delivered'
+        GROUP BY rider_id
+      ) d ON d.rider_id = r.id
+      ORDER BY r.id
+    `);
     const safe = rows.map(({ password, ...rest }) => rest);
     res.json(safe);
   } catch (err) {
@@ -361,23 +403,29 @@ app.get("/api/admin/riders", requireAdmin, async (req, res) => {
    RID-#### style ID is generated automatically. Requires admin auth. */
 app.post("/api/admin/riders", requireAdmin, async (req, res) => {
   try {
-    const { id, name, password, vehicle, vehicleNumber, phone, email } = req.body || {};
+    const { id, name, password, vehicle, vehicleNumber, phone, email } =
+      req.body || {};
 
     if (!name?.trim() || !password) {
       return res.status(400).json({ error: "Name and password are required." });
     }
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters." });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters." });
     }
 
-    const riderId = id?.trim() || `RID-${Math.floor(1000 + Math.random() * 9000)}`;
+    const riderId =
+      id?.trim() || `RID-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const existing = await pool.query(
       "SELECT id FROM riders WHERE LOWER(id) = LOWER($1)",
-      [riderId]
+      [riderId],
     );
     if (existing.rows.length > 0) {
-      return res.status(409).json({ error: `Rider ID ${riderId} is already in use.` });
+      return res
+        .status(409)
+        .json({ error: `Rider ID ${riderId} is already in use.` });
     }
 
     const { rows } = await pool.query(
@@ -393,12 +441,14 @@ app.post("/api/admin/riders", requireAdmin, async (req, res) => {
         phone?.trim() || null,
         email?.trim() || null,
         5.0,
-      ]
+      ],
     );
 
     const { password: _pw, ...profile } = rows[0];
     profile.vehicleNumber = profile.vehicle_number;
     delete profile.vehicle_number;
+    profile.delivery_count = 0;
+    profile.total_earnings = 0;
 
     res.status(201).json(profile);
   } catch (err) {
@@ -412,24 +462,54 @@ app.delete("/api/admin/riders/:id", requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "DELETE FROM riders WHERE LOWER(id) = LOWER($1) RETURNING id",
-      [req.params.id]
+      [req.params.id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: "Rider not found." });
     }
     res.json({ ok: true });
   } catch (err) {
-    console.error("[quickmed-backend] DELETE /api/admin/riders/:id error:", err);
+    console.error(
+      "[quickmed-backend] DELETE /api/admin/riders/:id error:",
+      err,
+    );
     res.status(500).json({ error: "Failed to delete rider." });
   }
 });
 
-/* GET /api/admin/customers — all customers, passwords stripped */
+/* GET /api/admin/customers — all customers, passwords stripped, with
+   order stats (count, total spent) and the full order list (id, date,
+   address, total, status) joined in from orders so the admin panel can
+   show each customer's order history. Orders placed before a customer_id
+   column existed on `orders` won't show up here — see migration note. */
 app.get("/api/admin/customers", requireAdmin, async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM customers ORDER BY id");
-    const safe = rows.map(({ password, ...rest }) => rest);
-    res.json(safe);
+    const { rows } = await pool.query(`
+      SELECT c.id, c.name, c.email, c.phone, c.created_at,
+        COALESCE(o.order_count, 0)::int AS order_count,
+        COALESCE(o.total_spent, 0)::numeric AS total_spent,
+        COALESCE(o.orders, '[]') AS orders
+      FROM customers c
+      LEFT JOIN (
+        SELECT customer_id,
+          COUNT(*) AS order_count,
+          SUM(total) AS total_spent,
+          json_agg(
+            json_build_object(
+              'id', id,
+              'order_date', order_date,
+              'address', address,
+              'total', total,
+              'status', status
+            ) ORDER BY id DESC
+          ) AS orders
+        FROM orders
+        WHERE customer_id IS NOT NULL
+        GROUP BY customer_id
+      ) o ON o.customer_id = c.id
+      ORDER BY c.id
+    `);
+    res.json(rows);
   } catch (err) {
     console.error("[quickmed-backend] /api/admin/customers error:", err);
     res.status(500).json({ error: "Failed to fetch customers." });
@@ -455,7 +535,9 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
 /* GET /api/admin/medical-stores — all medical stores/pharmacies */
 app.get("/api/admin/medical-stores", requireAdmin, async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM medical_stores ORDER BY id DESC");
+    const { rows } = await pool.query(
+      "SELECT * FROM medical_stores ORDER BY id DESC",
+    );
     res.json(rows);
   } catch (err) {
     console.error("[quickmed-backend] /api/admin/medical-stores error:", err);
@@ -470,20 +552,27 @@ app.get("/api/admin/medical-stores", requireAdmin, async (req, res) => {
    POST /api/stores/login below). */
 app.post("/api/admin/medical-stores", requireAdmin, async (req, res) => {
   try {
-    const { name, address, phone, email, password, licenseNumber, status } = req.body || {};
+    const { name, address, phone, email, password, licenseNumber, status } =
+      req.body || {};
     if (!name?.trim() || !email?.trim() || !password) {
-      return res.status(400).json({ error: "Store name, email and password are required." });
+      return res
+        .status(400)
+        .json({ error: "Store name, email and password are required." });
     }
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters." });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters." });
     }
 
     const existing = await pool.query(
       "SELECT id FROM medical_stores WHERE LOWER(email) = LOWER($1)",
-      [email.trim()]
+      [email.trim()],
     );
     if (existing.rows.length > 0) {
-      return res.status(409).json({ error: "A store with this email already exists." });
+      return res
+        .status(409)
+        .json({ error: "A store with this email already exists." });
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -499,12 +588,15 @@ app.post("/api/admin/medical-stores", requireAdmin, async (req, res) => {
         hashed,
         licenseNumber?.trim() || null,
         status?.trim() || "Active",
-      ]
+      ],
     );
 
     res.status(201).json(rows[0]);
   } catch (err) {
-    console.error("[quickmed-backend] POST /api/admin/medical-stores error:", err);
+    console.error(
+      "[quickmed-backend] POST /api/admin/medical-stores error:",
+      err,
+    );
     res.status(500).json({ error: "Failed to add medical store." });
   }
 });
@@ -514,14 +606,17 @@ app.delete("/api/admin/medical-stores/:id", requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
       "DELETE FROM medical_stores WHERE id = $1 RETURNING id",
-      [req.params.id]
+      [req.params.id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: "Medical store not found." });
     }
     res.json({ ok: true });
   } catch (err) {
-    console.error("[quickmed-backend] DELETE /api/admin/medical-stores/:id error:", err);
+    console.error(
+      "[quickmed-backend] DELETE /api/admin/medical-stores/:id error:",
+      err,
+    );
     res.status(500).json({ error: "Failed to delete medical store." });
   }
 });
@@ -558,12 +653,14 @@ app.post("/api/stores/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email?.trim() || !password) {
-      return res.status(400).json({ error: "Email and password are required." });
+      return res
+        .status(400)
+        .json({ error: "Email and password are required." });
     }
 
     const { rows } = await pool.query(
       "SELECT * FROM medical_stores WHERE LOWER(email) = LOWER($1)",
-      [email.trim()]
+      [email.trim()],
     );
     if (rows.length === 0 || !rows[0].password) {
       return res.status(401).json({ error: "Invalid email or password." });
@@ -623,14 +720,28 @@ app.patch("/api/stores/orders/:id/status", requireStore, async (req, res) => {
     }
     const { rows } = await pool.query(
       "UPDATE orders SET status = $1 WHERE id = $2 RETURNING *",
-      [status.trim(), req.params.id]
+      [status.trim(), req.params.id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: "Order not found." });
     }
+
+    // Store confirming the order (moving it past "Placed") releases the
+    // matching delivery to riders — flips it from 'awaiting_confirmation'
+    // to 'pending' so it starts showing up on rider dashboards.
+    if (status.trim().toLowerCase() !== "placed") {
+      await pool.query(
+        "UPDATE deliveries SET status = 'pending' WHERE order_id = $1 AND status = 'awaiting_confirmation'",
+        [req.params.id],
+      );
+    }
+
     res.json(rows[0]);
   } catch (err) {
-    console.error("[quickmed-backend] PATCH /api/stores/orders/:id/status error:", err);
+    console.error(
+      "[quickmed-backend] PATCH /api/stores/orders/:id/status error:",
+      err,
+    );
     res.status(500).json({ error: "Failed to update order status." });
   }
 });
@@ -653,11 +764,14 @@ app.patch("/api/stores/orders/:id/status", requireStore, async (req, res) => {
 app.get("/api/riders/available-orders", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      "SELECT * FROM orders WHERE status = 'Ready for pickup' AND rider_id IS NULL ORDER BY id"
+      "SELECT * FROM orders WHERE status = 'Ready for pickup' AND rider_id IS NULL ORDER BY id",
     );
     res.json(rows);
   } catch (err) {
-    console.error("[quickmed-backend] /api/riders/available-orders error:", err);
+    console.error(
+      "[quickmed-backend] /api/riders/available-orders error:",
+      err,
+    );
     res.status(500).json({ error: "Failed to fetch available orders." });
   }
 });
@@ -672,10 +786,12 @@ app.post("/api/riders/:riderId/orders/:orderId/accept", async (req, res) => {
       `UPDATE orders SET rider_id = $1, status = 'On the way'
        WHERE id = $2 AND status = 'Ready for pickup' AND rider_id IS NULL
        RETURNING *`,
-      [req.params.riderId, req.params.orderId]
+      [req.params.riderId, req.params.orderId],
     );
     if (rows.length === 0) {
-      return res.status(409).json({ error: "This order was already accepted by another rider." });
+      return res
+        .status(409)
+        .json({ error: "This order was already accepted by another rider." });
     }
     res.json(rows[0]);
   } catch (err) {
@@ -689,7 +805,7 @@ app.get("/api/riders/:riderId/active-order", async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM orders WHERE rider_id = $1 AND status = 'On the way' ORDER BY id DESC LIMIT 1",
-      [req.params.riderId]
+      [req.params.riderId],
     );
     res.json(rows[0] || null);
   } catch (err) {
@@ -705,7 +821,7 @@ app.post("/api/riders/:riderId/orders/:orderId/complete", async (req, res) => {
       `UPDATE orders SET status = 'Delivered'
        WHERE id = $1 AND rider_id = $2
        RETURNING *`,
-      [req.params.orderId, req.params.riderId]
+      [req.params.orderId, req.params.riderId],
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: "Order not found for this rider." });
@@ -722,12 +838,151 @@ app.get("/api/riders/:riderId/history", async (req, res) => {
   try {
     const { rows } = await pool.query(
       "SELECT * FROM orders WHERE rider_id = $1 AND status = 'Delivered' ORDER BY id DESC",
-      [req.params.riderId]
+      [req.params.riderId],
     );
     res.json(rows);
   } catch (err) {
     console.error("[quickmed-backend] rider history error:", err);
     res.status(500).json({ error: "Failed to fetch delivery history." });
+  }
+});
+
+/* =========================================================
+   RIDER DELIVERIES — requests, active delivery, earnings, history
+   Requires the `deliveries` table — see deliveries.sql.
+========================================================= */
+
+/* GET /api/riders/:id/dashboard
+   Everything the rider dashboard needs in one call: pending requests,
+   this rider's active delivery (if any), today's completed deliveries,
+   earnings totals + 7-day bars, and full delivery history. */
+app.get("/api/riders/:id/dashboard", async (req, res) => {
+  const riderId = req.params.id;
+  try {
+    const [requestsQ, activeQ, todayQ, historyQ, monthQ, allTimeQ, barsQ] =
+      await Promise.all([
+        pool.query(
+          "SELECT * FROM deliveries WHERE status = 'pending' AND rider_id IS NULL ORDER BY created_at",
+        ),
+        pool.query(
+          "SELECT * FROM deliveries WHERE rider_id = $1 AND status IN ('accepted','picked_up') LIMIT 1",
+          [riderId],
+        ),
+        pool.query(
+          "SELECT * FROM deliveries WHERE rider_id = $1 AND status = 'delivered' AND completed_at::date = CURRENT_DATE ORDER BY completed_at DESC",
+          [riderId],
+        ),
+        pool.query(
+          "SELECT * FROM deliveries WHERE rider_id = $1 AND status = 'delivered' ORDER BY completed_at DESC",
+          [riderId],
+        ),
+        pool.query(
+          "SELECT COALESCE(SUM(payout),0) AS total FROM deliveries WHERE rider_id = $1 AND status = 'delivered' AND completed_at >= date_trunc('month', CURRENT_DATE)",
+          [riderId],
+        ),
+        pool.query(
+          "SELECT COALESCE(SUM(payout),0) AS total FROM deliveries WHERE rider_id = $1 AND status = 'delivered'",
+          [riderId],
+        ),
+        pool.query(
+          `SELECT to_char(d.day, 'Dy') AS day, COALESCE(SUM(del.payout),0) AS amount
+         FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') AS d(day)
+         LEFT JOIN deliveries del
+           ON del.rider_id = $1 AND del.status = 'delivered' AND del.completed_at::date = d.day
+         GROUP BY d.day ORDER BY d.day`,
+          [riderId],
+        ),
+      ]);
+
+    const STAGE_OF = { accepted: 0, picked_up: 1, delivered: 2 };
+    const active = activeQ.rows[0]
+      ? { ...activeQ.rows[0], stageIndex: STAGE_OF[activeQ.rows[0].status] }
+      : null;
+    const todayTotal = todayQ.rows.reduce((s, d) => s + Number(d.payout), 0);
+
+    res.json({
+      requests: requestsQ.rows,
+      active,
+      completedToday: todayQ.rows,
+      history: historyQ.rows,
+      earnings: {
+        today: todayTotal,
+        week: barsQ.rows.reduce((s, b) => s + Number(b.amount), 0),
+        month: Number(monthQ.rows[0].total),
+        allTime: Number(allTimeQ.rows[0].total),
+        bars: barsQ.rows.map((b) => ({
+          day: b.day.trim(),
+          amount: Number(b.amount),
+        })),
+      },
+    });
+  } catch (err) {
+    console.error(
+      "[quickmed-backend] GET /api/riders/:id/dashboard error:",
+      err,
+    );
+    res.status(500).json({ error: "Failed to load rider dashboard." });
+  }
+});
+
+/* POST /api/riders/:id/requests/:reqId/accept */
+app.post("/api/riders/:id/requests/:reqId/accept", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "UPDATE deliveries SET rider_id = $1, status = 'accepted' WHERE id = $2 AND status = 'pending' RETURNING *",
+      [req.params.id, req.params.reqId],
+    );
+    if (rows.length === 0)
+      return res
+        .status(409)
+        .json({ error: "This request is no longer available." });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("[quickmed-backend] accept error:", err);
+    res.status(500).json({ error: "Failed to accept request." });
+  }
+});
+
+/* POST /api/riders/:id/requests/:reqId/decline */
+app.post("/api/riders/:id/requests/:reqId/decline", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "UPDATE deliveries SET status = 'declined' WHERE id = $1 AND status = 'pending' RETURNING id",
+      [req.params.reqId],
+    );
+    if (rows.length === 0)
+      return res
+        .status(409)
+        .json({ error: "This request is no longer available." });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[quickmed-backend] decline error:", err);
+    res.status(500).json({ error: "Failed to decline request." });
+  }
+});
+
+/* PATCH /api/riders/:id/active/advance
+   accepted -> picked_up -> delivered (sets completed_at). */
+app.patch("/api/riders/:id/active/advance", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM deliveries WHERE rider_id = $1 AND status IN ('accepted','picked_up') LIMIT 1",
+      [req.params.id],
+    );
+    if (rows.length === 0)
+      return res.status(404).json({ error: "No active delivery to advance." });
+    const current = rows[0];
+    const next = current.status === "accepted" ? "picked_up" : "delivered";
+    const { rows: updated } = await pool.query(
+      next === "delivered"
+        ? "UPDATE deliveries SET status = $1, completed_at = now() WHERE id = $2 RETURNING *"
+        : "UPDATE deliveries SET status = $1 WHERE id = $2 RETURNING *",
+      [next, current.id],
+    );
+    res.json(updated[0]);
+  } catch (err) {
+    console.error("[quickmed-backend] advance error:", err);
+    res.status(500).json({ error: "Failed to update delivery." });
   }
 });
 
@@ -741,32 +996,82 @@ app.get("/api/orders", async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error("[quickmed-backend] /api/orders error:", err);
-    res.status(500).json({ error: "Failed to fetch orders from the database." });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch orders from the database." });
   }
 });
 
 /* POST /api/orders
-   Body: { id, items, total, customerName?, address? }
-   Creates a new order (called from CheckoutPage after "Place order").
-   payout is set to a flat ৳25 delivery fee for now — replace with
-   distance-based logic later if needed. */
+   Body: { id, items, total, address?, customerId?, customerName? }
+   Creates a new order (called from CheckoutPage after "Place order"),
+   and also creates a matching 'pending' delivery request so it shows
+   up on the rider dashboard immediately. customerId links the order to
+   the logged-in customer so the admin panel can show order history per
+   customer — requires the customer_id column (see migration note at
+   the top of this file). */
 app.post("/api/orders", async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { id, items, total, customerName, address } = req.body || {};
+    const { id, items, total, address, customerId, customerName } =
+      req.body || {};
     if (!id || !items || total == null) {
-      return res.status(400).json({ error: "id, items, and total are required." });
+      return res
+        .status(400)
+        .json({ error: "id, items, and total are required." });
     }
-    const orderDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    const { rows } = await pool.query(
-      `INSERT INTO orders (id, order_date, items, total, status, customer_name, address, payout)
+    const orderDate = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    await client.query("BEGIN");
+
+    const { rows } = await client.query(
+      `INSERT INTO orders (id, order_date, items, total, status, customer_id, customer_name, address)
        VALUES ($1, $2, $3, $4, 'Placed', $5, $6, $7)
        RETURNING *`,
-      [id, orderDate, items, total, customerName || null, address || null, 25]
+      [
+        id,
+        orderDate,
+        items,
+        total,
+        customerId || null,
+        customerName || null,
+        address || null,
+      ],
     );
-    res.status(201).json(rows[0]);
+    const order = rows[0];
+
+    // Rough distance/ETA placeholders until real pharmacy/geo data exists.
+    const distanceKm = (1.5 + Math.random() * 3).toFixed(1);
+    const etaMin = Math.round(8 + Number(distanceKm) * 3);
+    const payout = Math.max(50, Math.round(total * 0.08));
+
+    await client.query(
+      `INSERT INTO deliveries (request_code, pharmacy, customer, address, items, distance, eta, payout, status, order_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7,$8, 'awaiting_confirmation', $9)`,
+      [
+        order.id,
+        "Quick Med Partner Pharmacy",
+        customerName || "Customer",
+        address || "Address not provided",
+        items,
+        `${distanceKm} km`,
+        `${etaMin} min`,
+        payout,
+        order.id,
+      ],
+    );
+
+    await client.query("COMMIT");
+    res.status(201).json(order);
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("[quickmed-backend] POST /api/orders error:", err);
     res.status(500).json({ error: "Failed to create order." });
+  } finally {
+    client.release();
   }
 });
 
@@ -779,13 +1084,25 @@ app.post("/api/prescription/read", async (req, res) => {
     const { base64, mediaType, isPdf } = req.body || {};
 
     if (!base64) {
-      return res.status(400).json({ error: "Missing 'base64' file data in request body." });
+      return res
+        .status(400)
+        .json({ error: "Missing 'base64' file data in request body." });
     }
     if (!OPENROUTER_API_KEY) {
-      return res.status(500).json({ error: "Server is missing OPENROUTER_API_KEY. Set it in the backend's .env file." });
+      return res
+        .status(500)
+        .json({
+          error:
+            "Server is missing OPENROUTER_API_KEY. Set it in the backend's .env file.",
+        });
     }
     if (isPdf) {
-      return res.status(415).json({ error: "This model doesn't support PDF input — please upload the prescription as a photo (JPEG/PNG) instead." });
+      return res
+        .status(415)
+        .json({
+          error:
+            "This model doesn't support PDF input — please upload the prescription as a photo (JPEG/PNG) instead.",
+        });
     }
 
     const openRouterRes = await fetch(OPENROUTER_URL, {
@@ -806,14 +1123,16 @@ app.post("/api/prescription/read", async (req, res) => {
                   "instructions, doctor/patient details, letterhead, and signatures).\n\n" +
                   "Respond with ONLY a single JSON object in exactly this shape, and nothing else — no " +
                   "explanation, no markdown, no code fences, no text before or after it:\n" +
-                  "{\"medicines\": [\"Medicine One\", \"Medicine Two\"]}\n\n" +
+                  '{"medicines": ["Medicine One", "Medicine Two"]}\n\n' +
                   "List every distinct medicine you can identify, however many there are. If you can't " +
                   "confidently read any medicine name, or the image isn't a prescription at all, respond " +
-                  "with exactly {\"medicines\": []}.",
+                  'with exactly {"medicines": []}.',
               },
               {
                 type: "image_url",
-                image_url: { url: `data:${mediaType || "image/jpeg"};base64,${base64}` },
+                image_url: {
+                  url: `data:${mediaType || "image/jpeg"};base64,${base64}`,
+                },
               },
             ],
           },
@@ -825,22 +1144,29 @@ app.post("/api/prescription/read", async (req, res) => {
 
     if (!openRouterRes.ok) {
       console.error("[quickmed-backend] OpenRouter API error:", data);
-      return res.status(openRouterRes.status).json({ error: data?.error?.message || "OpenRouter API request failed." });
+      return res
+        .status(openRouterRes.status)
+        .json({
+          error: data?.error?.message || "OpenRouter API request failed.",
+        });
     }
 
     const rawText = data.choices?.[0]?.message?.content || "";
     const medicines = parseMedicinesFromModelOutput(rawText);
 
     if (medicines === null) {
-      console.error("[quickmed-backend] Could not extract medicines from model output:", rawText);
+      console.error(
+        "[quickmed-backend] Could not extract medicines from model output:",
+        rawText,
+      );
       return res.status(502).json({
-        error: "Couldn't read the model's response. Try again, or use a clearer photo.",
+        error:
+          "Couldn't read the model's response. Try again, or use a clearer photo.",
         raw: rawText.slice(0, 800),
       });
     }
 
     return res.json({ medicines });
-
   } catch (err) {
     console.error("[quickmed-backend] /api/prescription/read error:", err);
     return res.status(500).json({ error: "Unexpected server error." });
@@ -856,10 +1182,17 @@ app.post("/api/chat", async (req, res) => {
     const { messages } = req.body || {};
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: "Missing 'messages' array in request body." });
+      return res
+        .status(400)
+        .json({ error: "Missing 'messages' array in request body." });
     }
     if (!OPENROUTER_API_KEY) {
-      return res.status(500).json({ error: "Server is missing OPENROUTER_API_KEY. Set it in the backend's .env file." });
+      return res
+        .status(500)
+        .json({
+          error:
+            "Server is missing OPENROUTER_API_KEY. Set it in the backend's .env file.",
+        });
     }
 
     const catalogText = await buildCatalogText();
@@ -884,12 +1217,18 @@ app.post("/api/chat", async (req, res) => {
 
     if (!openRouterRes.ok) {
       console.error("[quickmed-backend] OpenRouter API error:", data);
-      return res.status(openRouterRes.status).json({ error: data?.error?.message || "OpenRouter API request failed." });
+      return res
+        .status(openRouterRes.status)
+        .json({
+          error: data?.error?.message || "OpenRouter API request failed.",
+        });
     }
 
     const reply = (data.choices?.[0]?.message?.content || "").trim();
 
-    return res.json({ reply: reply || "Sorry, I didn't catch that — could you rephrase?" });
+    return res.json({
+      reply: reply || "Sorry, I didn't catch that — could you rephrase?",
+    });
   } catch (err) {
     console.error("[quickmed-backend] /api/chat error:", err);
     return res.status(500).json({ error: "Unexpected server error." });

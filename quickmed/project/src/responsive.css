@@ -92,10 +92,6 @@
   .qm-contact-grid { grid-template-columns: 1fr !important; }
 }
 
-/* ---- Footer ---- */
-/* @media (max-width: 800px) {
-  .qm-footer-grid { grid-template-columns: 1fr 1fr !important; }
-} */
 
 /* ---- Footer ---- */
 @media (max-width: 1100px) {

@@ -1,4 +1,3 @@
-
 /* AdminApp.jsx
    Completely standalone admin panel. No imports from App.jsx, no shared
    state, no goTo. Reached only via /admin — separate from the rest of
@@ -6,8 +5,29 @@
 */
 import { useState, useEffect } from "react";
 import {
-  ShieldCheck, LogOut, Bike, Users, Eye, EyeOff, RefreshCw, Star, Mail, Phone, Package,
-  Store, Plus, X, MapPin, Hash, Trash2, Truck, Lock, User,
+  ShieldCheck,
+  LogOut,
+  Bike,
+  Users,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Star,
+  Mail,
+  Phone,
+  Package,
+  Store,
+  Plus,
+  X,
+  MapPin,
+  Hash,
+  Trash2,
+  Truck,
+  Lock,
+  User,
+  ChevronDown,
+  ChevronUp,
+  Wallet,
 } from "lucide-react";
 import { C } from "./theme";
 
@@ -18,9 +38,22 @@ export default function AdminApp() {
   const [username, setUsername] = useState(null);
 
   if (!token) {
-    return <AdminLogin onLogin={(t, u) => { setToken(t); setUsername(u); }} />;
+    return (
+      <AdminLogin
+        onLogin={(t, u) => {
+          setToken(t);
+          setUsername(u);
+        }}
+      />
+    );
   }
-  return <AdminDashboard token={token} username={username} onLogout={() => setToken(null)} />;
+  return (
+    <AdminDashboard
+      token={token}
+      username={username}
+      onLogout={() => setToken(null)}
+    />
+  );
 }
 
 /* ---------- Login ---------- */
@@ -55,15 +88,54 @@ function AdminLogin({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0B1220", fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ width: "100%", maxWidth: 380, background: "#111A2B", border: "1px solid #1E293B", borderRadius: 20, padding: 36 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0B1220",
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 380,
+          background: "#111A2B",
+          border: "1px solid #1E293B",
+          borderRadius: 20,
+          padding: 36,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 22,
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <ShieldCheck size={20} color="#fff" />
           </div>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: "#F1F5F9" }}>Quick Med Admin</div>
-            <div style={{ fontSize: 12, color: "#94A3B8" }}>Internal access only</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#F1F5F9" }}>
+              Quick Med Admin
+            </div>
+            <div style={{ fontSize: 12, color: "#94A3B8" }}>
+              Internal access only
+            </div>
           </div>
         </div>
 
@@ -84,15 +156,42 @@ function AdminLogin({ onLogin }) {
               onKeyDown={(e) => e.key === "Enter" && submit()}
               style={inputStyle}
             />
-            <button onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94A3B8" }}>
+            <button
+              onClick={() => setShowPw(!showPw)}
+              style={{
+                position: "absolute",
+                right: 12,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#94A3B8",
+              }}
+            >
               {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-          {error && <div style={{ fontSize: 12.5, color: "#F87171", fontWeight: 600 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12.5, color: "#F87171", fontWeight: 600 }}>
+              {error}
+            </div>
+          )}
           <button
             onClick={submit}
             disabled={checking}
-            style={{ background: C.primary, color: "#fff", border: "none", padding: "13px", borderRadius: 12, fontWeight: 700, fontSize: 14.5, cursor: checking ? "default" : "pointer", opacity: checking ? 0.7 : 1, marginTop: 6 }}
+            style={{
+              background: C.primary,
+              color: "#fff",
+              border: "none",
+              padding: "13px",
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: 14.5,
+              cursor: checking ? "default" : "pointer",
+              opacity: checking ? 0.7 : 1,
+              marginTop: 6,
+            }}
           >
             {checking ? "Checking…" : "Log in"}
           </button>
@@ -103,8 +202,15 @@ function AdminLogin({ onLogin }) {
 }
 
 const inputStyle = {
-  width: "100%", boxSizing: "border-box", border: "1px solid #1E293B", borderRadius: 10,
-  padding: "12px 14px", fontSize: 13.5, outline: "none", background: "#0B1220", color: "#F1F5F9",
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1px solid #1E293B",
+  borderRadius: 10,
+  padding: "12px 14px",
+  fontSize: 13.5,
+  outline: "none",
+  background: "#0B1220",
+  color: "#F1F5F9",
 };
 
 /* ---------- Dashboard ---------- */
@@ -122,13 +228,16 @@ function AdminDashboard({ token, username, onLogout }) {
     setError(null);
     try {
       const headers = { "x-admin-token": token };
-      const [ridersRes, customersRes, ordersRes, storesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/admin/riders`, { headers }),
-        fetch(`${API_BASE_URL}/api/admin/customers`, { headers }),
-        fetch(`${API_BASE_URL}/api/admin/orders`, { headers }),
-        fetch(`${API_BASE_URL}/api/admin/medical-stores`, { headers }),
-      ]);
-      if (!ridersRes.ok || !customersRes.ok || !ordersRes.ok || !storesRes.ok) throw new Error("Failed to load data.");
+      const [ridersRes, customersRes, ordersRes, storesRes] = await Promise.all(
+        [
+          fetch(`${API_BASE_URL}/api/admin/riders`, { headers }),
+          fetch(`${API_BASE_URL}/api/admin/customers`, { headers }),
+          fetch(`${API_BASE_URL}/api/admin/orders`, { headers }),
+          fetch(`${API_BASE_URL}/api/admin/medical-stores`, { headers }),
+        ],
+      );
+      if (!ridersRes.ok || !customersRes.ok || !ordersRes.ok || !storesRes.ok)
+        throw new Error("Failed to load data.");
       setRiders(await ridersRes.json());
       setCustomers(await customersRes.json());
       setOrders(await ordersRes.json());
@@ -140,11 +249,16 @@ function AdminDashboard({ token, username, onLogout }) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const logout = async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/admin/logout`, { method: "POST", headers: { "x-admin-token": token } });
+      await fetch(`${API_BASE_URL}/api/admin/logout`, {
+        method: "POST",
+        headers: { "x-admin-token": token },
+      });
     } catch {}
     onLogout();
   };
@@ -190,37 +304,101 @@ function AdminDashboard({ token, username, onLogout }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0B1220", color: "#F1F5F9", fontFamily: "'Inter', sans-serif" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0B1220",
+        color: "#F1F5F9",
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
       {/* Top bar */}
-      <div style={{ borderBottom: "1px solid #1E293B", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          borderBottom: "1px solid #1E293B",
+          padding: "16px 28px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 9,
+              background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <ShieldCheck size={17} color="#fff" />
           </div>
           <div style={{ fontSize: 15.5, fontWeight: 800 }}>Quick Med Admin</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ fontSize: 13, color: "#94A3B8" }}>Signed in as <strong style={{ color: "#F1F5F9" }}>{username}</strong></span>
-          <button onClick={load} style={iconBtn} aria-label="Refresh"><RefreshCw size={16} /></button>
-          <button onClick={logout} style={{ ...iconBtn, color: "#F87171" }} aria-label="Log out"><LogOut size={16} /></button>
+          <span style={{ fontSize: 13, color: "#94A3B8" }}>
+            Signed in as{" "}
+            <strong style={{ color: "#F1F5F9" }}>{username}</strong>
+          </span>
+          <button onClick={load} style={iconBtn} aria-label="Refresh">
+            <RefreshCw size={16} />
+          </button>
+          <button
+            onClick={logout}
+            style={{ ...iconBtn, color: "#F87171" }}
+            aria-label="Log out"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px 80px" }}>
+      <div
+        style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px 80px" }}
+      >
         {/* Tabs */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginBottom: 24,
+            flexWrap: "wrap",
+          }}
+        >
           {[
             { key: "riders", label: `Riders (${riders.length})`, icon: Bike },
-            { key: "customers", label: `Customers (${customers.length})`, icon: Users },
-            { key: "orders", label: `Orders (${orders.length})`, icon: Package },
-            { key: "stores", label: `Medical Stores (${stores.length})`, icon: Store },
+            {
+              key: "customers",
+              label: `Customers (${customers.length})`,
+              icon: Users,
+            },
+            {
+              key: "orders",
+              label: `Orders (${orders.length})`,
+              icon: Package,
+            },
+            {
+              key: "stores",
+              label: `Medical Stores (${stores.length})`,
+              icon: Store,
+            },
           ].map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
               style={{
-                display: "flex", alignItems: "center", gap: 8, border: "none", cursor: "pointer",
-                padding: "10px 18px", borderRadius: 10, fontSize: 13.5, fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                border: "none",
+                cursor: "pointer",
+                padding: "10px 18px",
+                borderRadius: 10,
+                fontSize: 13.5,
+                fontWeight: 700,
                 background: tab === t.key ? C.primary : "#111A2B",
                 color: tab === t.key ? "#fff" : "#94A3B8",
               }}
@@ -231,9 +409,17 @@ function AdminDashboard({ token, username, onLogout }) {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "#94A3B8" }}>Loading…</div>
+          <div
+            style={{ textAlign: "center", padding: "60px 0", color: "#94A3B8" }}
+          >
+            Loading…
+          </div>
         ) : error ? (
-          <div style={{ textAlign: "center", padding: "60px 0", color: "#F87171" }}>{error}</div>
+          <div
+            style={{ textAlign: "center", padding: "60px 0", color: "#F87171" }}
+          >
+            {error}
+          </div>
         ) : tab === "riders" ? (
           <RidersTab riders={riders} onAdd={addRider} onDelete={deleteRider} />
         ) : tab === "customers" ? (
@@ -241,7 +427,11 @@ function AdminDashboard({ token, username, onLogout }) {
         ) : tab === "orders" ? (
           <OrdersTable orders={orders} />
         ) : (
-          <MedicalStoresTab stores={stores} onAdd={addStore} onDelete={deleteStore} />
+          <MedicalStoresTab
+            stores={stores}
+            onAdd={addStore}
+            onDelete={deleteStore}
+          />
         )}
       </div>
     </div>
@@ -249,8 +439,16 @@ function AdminDashboard({ token, username, onLogout }) {
 }
 
 const iconBtn = {
-  background: "#111A2B", border: "1px solid #1E293B", borderRadius: 9, width: 34, height: 34,
-  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#F1F5F9",
+  background: "#111A2B",
+  border: "1px solid #1E293B",
+  borderRadius: 9,
+  width: 34,
+  height: 34,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  color: "#F1F5F9",
 };
 
 /* ---------- Tables ---------- */
@@ -259,12 +457,27 @@ function RidersTab({ riders, onAdd, onDelete }) {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: 16,
+        }}
+      >
         <button
           onClick={() => setOpen(true)}
           style={{
-            display: "flex", alignItems: "center", gap: 8, background: C.primary, color: "#fff",
-            border: "none", padding: "10px 18px", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: C.primary,
+            color: "#fff",
+            border: "none",
+            padding: "10px 18px",
+            borderRadius: 10,
+            fontSize: 13.5,
+            fontWeight: 700,
+            cursor: "pointer",
           }}
         >
           <Plus size={15} /> Add rider
@@ -277,25 +490,116 @@ function RidersTab({ riders, onAdd, onDelete }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {riders.map((r) => (
             <div key={r.id} style={cardStyle}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#1A2437", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: "#1A2437",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
                 <Bike size={18} color={C.primary} />
               </div>
               <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{r.name} <span style={{ color: "#94A3B8", fontWeight: 500 }}>· {r.id}</span></div>
-                <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>{r.vehicle}{r.vehicle_number ? ` · ${r.vehicle_number}` : ""}</div>
-                <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11.5, color: "#94A3B8" }}>
-                  {r.phone && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {r.phone}</span>}
-                  {r.email && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={11} /> {r.email}</span>}
+                <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+                  {r.name}{" "}
+                  <span style={{ color: "#94A3B8", fontWeight: 500 }}>
+                    · {r.id}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
+                  {r.vehicle}
+                  {r.vehicle_number ? ` · ${r.vehicle_number}` : ""}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 14,
+                    marginTop: 6,
+                    fontSize: 11.5,
+                    color: "#94A3B8",
+                  }}
+                >
+                  {r.phone && (
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Phone size={11} /> {r.phone}
+                    </span>
+                  )}
+                  {r.email && (
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Mail size={11} /> {r.email}
+                    </span>
+                  )}
                 </div>
               </div>
               {r.rating && (
-                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 700 }}>
-                  <Star size={13} style={{ fill: "#F59E0B", color: "#F59E0B" }} /> {Number(r.rating).toFixed(1)}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                >
+                  <Star
+                    size={13}
+                    style={{ fill: "#F59E0B", color: "#F59E0B" }}
+                  />{" "}
+                  {Number(r.rating).toFixed(1)}
                 </div>
               )}
+              {/* Deliveries done + total earnings, pulled from the deliveries table */}
+              <div style={{ textAlign: "center", minWidth: 64 }}>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Package size={13} color={C.primary} /> {r.delivery_count}
+                </div>
+                <div style={{ fontSize: 10.5, color: "#94A3B8" }}>
+                  Deliveries
+                </div>
+              </div>
+              <div style={{ textAlign: "center", minWidth: 90 }}>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: "#34D399",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Wallet size={13} /> ৳
+                  {Number(r.total_earnings).toLocaleString()}
+                </div>
+                <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Earned</div>
+              </div>
               <button
                 onClick={() => onDelete(r.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8" }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94A3B8",
+                }}
                 aria-label="Remove rider"
               >
                 <Trash2 size={16} />
@@ -311,7 +615,15 @@ function RidersTab({ riders, onAdd, onDelete }) {
 }
 
 function AddRiderModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({ id: "", name: "", password: "", vehicle: "", vehicleNumber: "", phone: "", email: "" });
+  const [form, setForm] = useState({
+    id: "",
+    name: "",
+    password: "",
+    vehicle: "",
+    vehicleNumber: "",
+    phone: "",
+    email: "",
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -339,51 +651,204 @@ function AddRiderModal({ onClose, onAdd }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(2,6,15,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "#111A2B", border: "1px solid #1E293B", borderRadius: 20, padding: 26, width: "100%", maxWidth: 420 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(2,6,15,0.65)",
+        zIndex: 300,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#111A2B",
+          border: "1px solid #1E293B",
+          borderRadius: 20,
+          padding: 26,
+          width: "100%",
+          maxWidth: 420,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 18,
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 9,
+                background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <Bike size={17} color="#fff" />
             </div>
-            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#F1F5F9" }}>Add rider</div>
+            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#F1F5F9" }}>
+              Add rider
+            </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8" }} aria-label="Close"><X size={18} /></button>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#94A3B8",
+            }}
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ position: "relative" }}>
-            <Hash size={15} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
-            <input value={form.id} onChange={set("id")} placeholder="Rider ID (leave blank to auto-generate)" style={{ ...inputStyle, paddingLeft: 38 }} />
+            <Hash
+              size={15}
+              style={{
+                position: "absolute",
+                left: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#94A3B8",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              value={form.id}
+              onChange={set("id")}
+              placeholder="Rider ID (leave blank to auto-generate)"
+              style={{ ...inputStyle, paddingLeft: 38 }}
+            />
           </div>
           <div style={{ position: "relative" }}>
-            <User size={15} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
-            <input value={form.name} onChange={set("name")} placeholder="Full name *" style={{ ...inputStyle, paddingLeft: 38 }} />
+            <User
+              size={15}
+              style={{
+                position: "absolute",
+                left: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#94A3B8",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              value={form.name}
+              onChange={set("name")}
+              placeholder="Full name *"
+              style={{ ...inputStyle, paddingLeft: 38 }}
+            />
           </div>
           <div style={{ position: "relative" }}>
-            <Lock size={15} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
-            <input type="password" value={form.password} onChange={set("password")} placeholder="Password *" style={{ ...inputStyle, paddingLeft: 38 }} />
+            <Lock
+              size={15}
+              style={{
+                position: "absolute",
+                left: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#94A3B8",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              type="password"
+              value={form.password}
+              onChange={set("password")}
+              placeholder="Password *"
+              style={{ ...inputStyle, paddingLeft: 38 }}
+            />
           </div>
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ position: "relative", flex: 1 }}>
-              <Truck size={15} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94A3B8", pointerEvents: "none" }} />
-              <input value={form.vehicle} onChange={set("vehicle")} placeholder="Vehicle, e.g. Motorbike · Dhaka" style={{ ...inputStyle, paddingLeft: 38 }} />
+              <Truck
+                size={15}
+                style={{
+                  position: "absolute",
+                  left: 14,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94A3B8",
+                  pointerEvents: "none",
+                }}
+              />
+              <input
+                value={form.vehicle}
+                onChange={set("vehicle")}
+                placeholder="Vehicle, e.g. Motorbike · Dhaka"
+                style={{ ...inputStyle, paddingLeft: 38 }}
+              />
             </div>
           </div>
-          <input value={form.vehicleNumber} onChange={set("vehicleNumber")} placeholder="Vehicle number" style={inputStyle} />
+          <input
+            value={form.vehicleNumber}
+            onChange={set("vehicleNumber")}
+            placeholder="Vehicle number"
+            style={inputStyle}
+          />
           <div style={{ display: "flex", gap: 12 }}>
-            <input value={form.phone} onChange={set("phone")} placeholder="Phone" style={inputStyle} />
-            <input value={form.email} onChange={set("email")} placeholder="Email" style={inputStyle} />
+            <input
+              value={form.phone}
+              onChange={set("phone")}
+              placeholder="Phone"
+              style={inputStyle}
+            />
+            <input
+              value={form.email}
+              onChange={set("email")}
+              placeholder="Email"
+              style={inputStyle}
+            />
           </div>
 
-          {error && <div style={{ fontSize: 12.5, color: "#F87171", fontWeight: 600 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12.5, color: "#F87171", fontWeight: 600 }}>
+              {error}
+            </div>
+          )}
 
           <button
             onClick={submit}
             disabled={saving}
-            style={{ background: C.primary, color: "#fff", border: "none", padding: "13px", borderRadius: 12, fontWeight: 700, fontSize: 14.5, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, marginTop: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            style={{
+              background: C.primary,
+              color: "#fff",
+              border: "none",
+              padding: "13px",
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: 14.5,
+              cursor: saving ? "default" : "pointer",
+              opacity: saving ? 0.7 : 1,
+              marginTop: 6,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
           >
-            {saving ? "Adding…" : <><Plus size={16} /> Add rider</>}
+            {saving ? (
+              "Adding…"
+            ) : (
+              <>
+                <Plus size={16} /> Add rider
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -391,25 +856,184 @@ function AddRiderModal({ onClose, onAdd }) {
   );
 }
 
+/* CustomersTable: click a row to expand and see that customer's full
+   order history (id, date, address, total). Order count + total spent
+   are shown inline on the collapsed row. */
 function CustomersTable({ customers }) {
+  const [openId, setOpenId] = useState(null);
+
   if (customers.length === 0) return <EmptyState label="No customers found." />;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {customers.map((c) => (
-        <div key={c.id} style={cardStyle}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#1A2437", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontWeight: 800, fontSize: 13 }}>
-            {(c.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-          </div>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 700 }}>{c.name} <span style={{ color: "#94A3B8", fontWeight: 500 }}>· #{c.id}</span></div>
-            <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11.5, color: "#94A3B8" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={11} /> {c.email}</span>
-              {c.phone && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {c.phone}</span>}
+      {customers.map((c) => {
+        const isOpen = openId === c.id;
+        const orders = c.orders || [];
+        return (
+          <div
+            key={c.id}
+            style={{
+              background: "#111A2B",
+              border: "1px solid #1E293B",
+              borderRadius: 14,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              onClick={() => setOpenId(isOpen ? null : c.id)}
+              style={{ ...cardStyle, border: "none", cursor: "pointer" }}
+            >
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: "#1A2437",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  fontWeight: 800,
+                  fontSize: 13,
+                }}
+              >
+                {(c.name || "?")
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+                  {c.name}{" "}
+                  <span style={{ color: "#94A3B8", fontWeight: 500 }}>
+                    · #{c.id}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 14,
+                    marginTop: 6,
+                    fontSize: 11.5,
+                    color: "#94A3B8",
+                  }}
+                >
+                  <span
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
+                  >
+                    <Mail size={11} /> {c.email}
+                  </span>
+                  {c.phone && (
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Phone size={11} /> {c.phone}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ textAlign: "center", minWidth: 64 }}>
+                <div style={{ fontSize: 15, fontWeight: 800 }}>
+                  {c.order_count}
+                </div>
+                <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Orders</div>
+              </div>
+              <div style={{ textAlign: "center", minWidth: 90 }}>
+                <div
+                  style={{ fontSize: 15, fontWeight: 800, color: "#34D399" }}
+                >
+                  ৳{Number(c.total_spent).toLocaleString()}
+                </div>
+                <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Spent</div>
+              </div>
+              <div style={{ fontSize: 11.5, color: "#94A3B8" }}>
+                {c.created_at
+                  ? new Date(c.created_at).toLocaleDateString()
+                  : ""}
+              </div>
+              {isOpen ? (
+                <ChevronUp size={16} color="#94A3B8" />
+              ) : (
+                <ChevronDown size={16} color="#94A3B8" />
+              )}
             </div>
+
+            {isOpen && (
+              <div
+                style={{ borderTop: "1px solid #1E293B", padding: "14px 18px" }}
+              >
+                {orders.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: "#94A3B8" }}>
+                    No orders placed yet.
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    {orders.map((o) => (
+                      <div
+                        key={o.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 14,
+                          fontSize: 12.5,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: "#F1F5F9",
+                            fontWeight: 700,
+                            minWidth: 90,
+                          }}
+                        >
+                          {o.id}
+                        </span>
+                        <span style={{ color: "#94A3B8", minWidth: 70 }}>
+                          {o.order_date}
+                        </span>
+                        <span
+                          style={{ color: "#94A3B8", flex: 1, minWidth: 160 }}
+                        >
+                          {o.address || "No address provided"}
+                        </span>
+                        <span
+                          style={{
+                            background: "rgba(37,99,235,0.14)",
+                            color: "#60A5FA",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: "3px 10px",
+                            borderRadius: 999,
+                          }}
+                        >
+                          {o.status}
+                        </span>
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            minWidth: 60,
+                            textAlign: "right",
+                          }}
+                        >
+                          ৳{o.total}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: 11.5, color: "#94A3B8" }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : ""}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -430,15 +1054,51 @@ function OrdersTable({ orders }) {
         const sc = statusColor(o.status);
         return (
           <div key={o.id} style={cardStyle}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "#1A2437", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: "#1A2437",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
               <Package size={18} color={C.primary} />
             </div>
             <div style={{ flex: 1, minWidth: 240 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 700 }}>{o.id} <span style={{ color: "#94A3B8", fontWeight: 500 }}>· {o.order_date}</span></div>
-              <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>{o.items}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+                {o.id}{" "}
+                <span style={{ color: "#94A3B8", fontWeight: 500 }}>
+                  · {o.order_date}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
+                {o.items}
+              </div>
+              {(o.customer_name || o.address) && (
+                <div style={{ fontSize: 11.5, color: "#64748B", marginTop: 2 }}>
+                  {o.customer_name}
+                  {o.customer_name && o.address ? " · " : ""}
+                  {o.address}
+                </div>
+              )}
             </div>
             <div style={{ fontSize: 14, fontWeight: 800 }}>৳{o.total}</div>
-            <span style={{ background: sc.bg, color: sc.fg, fontSize: 11.5, fontWeight: 700, padding: "5px 12px", borderRadius: 999 }}>{o.status}</span>
+            <span
+              style={{
+                background: sc.bg,
+                color: sc.fg,
+                fontSize: 11.5,
+                fontWeight: 700,
+                padding: "5px 12px",
+                borderRadius: 999,
+              }}
+            >
+              {o.status}
+            </span>
           </div>
         );
       })}
@@ -452,12 +1112,27 @@ function MedicalStoresTab({ stores, onAdd, onDelete }) {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: 16,
+        }}
+      >
         <button
           onClick={() => setOpen(true)}
           style={{
-            display: "flex", alignItems: "center", gap: 8, background: C.primary, color: "#fff",
-            border: "none", padding: "10px 18px", borderRadius: 10, fontSize: 13.5, fontWeight: 700, cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: C.primary,
+            color: "#fff",
+            border: "none",
+            padding: "10px 18px",
+            borderRadius: 10,
+            fontSize: 13.5,
+            fontWeight: 700,
+            cursor: "pointer",
           }}
         >
           <Plus size={15} /> Add medical store
@@ -470,28 +1145,78 @@ function MedicalStoresTab({ stores, onAdd, onDelete }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {stores.map((s) => (
             <div key={s.id} style={cardStyle}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "#1A2437", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  background: "#1A2437",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
                 <Store size={18} color={C.primary} />
               </div>
               <div style={{ flex: 1, minWidth: 220 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 700 }}>
                   {s.name}
-                  {s.license_number && <span style={{ color: "#94A3B8", fontWeight: 500 }}> · Lic# {s.license_number}</span>}
+                  {s.license_number && (
+                    <span style={{ color: "#94A3B8", fontWeight: 500 }}>
+                      {" "}
+                      · Lic# {s.license_number}
+                    </span>
+                  )}
                 </div>
                 {s.address && (
-                  <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#94A3B8",
+                      marginTop: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
                     <MapPin size={11} /> {s.address}
                   </div>
                 )}
-                <div style={{ display: "flex", gap: 14, marginTop: 6, fontSize: 11.5, color: "#94A3B8" }}>
-                  {s.phone && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {s.phone}</span>}
-                  {s.email && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={11} /> {s.email}</span>}
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 14,
+                    marginTop: 6,
+                    fontSize: 11.5,
+                    color: "#94A3B8",
+                  }}
+                >
+                  {s.phone && (
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Phone size={11} /> {s.phone}
+                    </span>
+                  )}
+                  {s.email && (
+                    <span
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                    >
+                      <Mail size={11} /> {s.email}
+                    </span>
+                  )}
                 </div>
               </div>
               <StatusPill status={s.status} />
               <button
                 onClick={() => onDelete(s.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8" }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94A3B8",
+                }}
                 aria-label="Remove store"
               >
                 <Trash2 size={16} />
@@ -515,14 +1240,32 @@ function StatusPill({ status }) {
   };
   const t = tones[s] || tones.active;
   return (
-    <span style={{ background: t.bg, color: t.fg, fontSize: 11.5, fontWeight: 700, padding: "5px 12px", borderRadius: 999, whiteSpace: "nowrap" }}>
+    <span
+      style={{
+        background: t.bg,
+        color: t.fg,
+        fontSize: 11.5,
+        fontWeight: 700,
+        padding: "5px 12px",
+        borderRadius: 999,
+        whiteSpace: "nowrap",
+      }}
+    >
       {status || "Active"}
     </span>
   );
 }
 
 function AddStoreModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({ name: "", address: "", phone: "", email: "", password: "", licenseNumber: "", status: "Active" });
+  const [form, setForm] = useState({
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
+    password: "",
+    licenseNumber: "",
+    status: "Active",
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -530,7 +1273,9 @@ function AddStoreModal({ onClose, onAdd }) {
 
   const submit = async () => {
     if (!form.name.trim() || !form.email.trim() || !form.password) {
-      setError("Store name, email and password are required (email + password let the store log into their own portal).");
+      setError(
+        "Store name, email and password are required (email + password let the store log into their own portal).",
+      );
       return;
     }
     if (form.password.length < 6) {
@@ -550,44 +1295,164 @@ function AddStoreModal({ onClose, onAdd }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(2,6,15,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "#111A2B", border: "1px solid #1E293B", borderRadius: 20, padding: 26, width: "100%", maxWidth: 420 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(2,6,15,0.65)",
+        zIndex: 300,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#111A2B",
+          border: "1px solid #1E293B",
+          borderRadius: 20,
+          padding: 26,
+          width: "100%",
+          maxWidth: 420,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 18,
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 9,
+                background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <Store size={17} color="#fff" />
             </div>
-            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#F1F5F9" }}>Add medical store</div>
+            <div style={{ fontSize: 15.5, fontWeight: 800, color: "#F1F5F9" }}>
+              Add medical store
+            </div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8" }} aria-label="Close"><X size={18} /></button>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#94A3B8",
+            }}
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
         </div>
-        <div style={{ fontSize: 12, color: "#94A3B8", marginBottom: 16, lineHeight: 1.6 }}>
-          The email and password you set here are what the store uses to log into their own Store Partner Portal (to see new orders and sales).
+        <div
+          style={{
+            fontSize: 12,
+            color: "#94A3B8",
+            marginBottom: 16,
+            lineHeight: 1.6,
+          }}
+        >
+          The email and password you set here are what the store uses to log
+          into their own Store Partner Portal (to see new orders and sales).
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <input value={form.name} onChange={set("name")} placeholder="Store / pharmacy name *" style={inputStyle} />
-          <input value={form.address} onChange={set("address")} placeholder="Address" style={inputStyle} />
+          <input
+            value={form.name}
+            onChange={set("name")}
+            placeholder="Store / pharmacy name *"
+            style={inputStyle}
+          />
+          <input
+            value={form.address}
+            onChange={set("address")}
+            placeholder="Address"
+            style={inputStyle}
+          />
           <div style={{ display: "flex", gap: 12 }}>
-            <input value={form.phone} onChange={set("phone")} placeholder="Phone" style={inputStyle} />
-            <input value={form.email} onChange={set("email")} placeholder="Email * (store login)" style={inputStyle} />
+            <input
+              value={form.phone}
+              onChange={set("phone")}
+              placeholder="Phone"
+              style={inputStyle}
+            />
+            <input
+              value={form.email}
+              onChange={set("email")}
+              placeholder="Email * (store login)"
+              style={inputStyle}
+            />
           </div>
-          <input type="password" value={form.password} onChange={set("password")} placeholder="Store portal password *" style={inputStyle} />
-          <input value={form.licenseNumber} onChange={set("licenseNumber")} placeholder="License number" style={inputStyle} />
-          <select value={form.status} onChange={set("status")} style={{ ...inputStyle, appearance: "auto" }}>
+          <input
+            type="password"
+            value={form.password}
+            onChange={set("password")}
+            placeholder="Store portal password *"
+            style={inputStyle}
+          />
+          <input
+            value={form.licenseNumber}
+            onChange={set("licenseNumber")}
+            placeholder="License number"
+            style={inputStyle}
+          />
+          <select
+            value={form.status}
+            onChange={set("status")}
+            style={{ ...inputStyle, appearance: "auto" }}
+          >
             <option value="Active">Active</option>
             <option value="Pending">Pending</option>
             <option value="Suspended">Suspended</option>
           </select>
 
-          {error && <div style={{ fontSize: 12.5, color: "#F87171", fontWeight: 600 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12.5, color: "#F87171", fontWeight: 600 }}>
+              {error}
+            </div>
+          )}
 
           <button
             onClick={submit}
             disabled={saving}
-            style={{ background: C.primary, color: "#fff", border: "none", padding: "13px", borderRadius: 12, fontWeight: 700, fontSize: 14.5, cursor: saving ? "default" : "pointer", opacity: saving ? 0.7 : 1, marginTop: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            style={{
+              background: C.primary,
+              color: "#fff",
+              border: "none",
+              padding: "13px",
+              borderRadius: 12,
+              fontWeight: 700,
+              fontSize: 14.5,
+              cursor: saving ? "default" : "pointer",
+              opacity: saving ? 0.7 : 1,
+              marginTop: 6,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
           >
-            {saving ? "Adding…" : <><Plus size={16} /> Add store</>}
+            {saving ? (
+              "Adding…"
+            ) : (
+              <>
+                <Plus size={16} /> Add store
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -596,10 +1461,27 @@ function AddStoreModal({ onClose, onAdd }) {
 }
 
 function EmptyState({ label }) {
-  return <div style={{ textAlign: "center", padding: "60px 0", color: "#94A3B8", fontSize: 13.5 }}>{label}</div>;
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "60px 0",
+        color: "#94A3B8",
+        fontSize: 13.5,
+      }}
+    >
+      {label}
+    </div>
+  );
 }
 
 const cardStyle = {
-  background: "#111A2B", border: "1px solid #1E293B", borderRadius: 14, padding: "14px 18px",
-  display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+  background: "#111A2B",
+  border: "1px solid #1E293B",
+  borderRadius: 14,
+  padding: "14px 18px",
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  flexWrap: "wrap",
 };

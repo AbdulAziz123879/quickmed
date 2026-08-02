@@ -1,7 +1,3 @@
-
-
-
-
 /* LoginPage.jsx
    User login form with a role toggle so both customers and riders can log in
    from the same page. Both roles now authenticate against PostgreSQL via
@@ -49,7 +45,9 @@ export function LoginPage({ theme, goTo, onRiderLogin, onCustomerLogin }) {
       onCustomerLogin?.(profile);
       goTo("dashboard");
     } catch (e) {
-      setCustomerError(e.message || "Invalid email or password. Please try again.");
+      setCustomerError(
+        e.message || "Invalid email or password. Please try again.",
+      );
     } finally {
       setCustomerChecking(false);
     }
@@ -67,23 +65,66 @@ export function LoginPage({ theme, goTo, onRiderLogin, onCustomerLogin }) {
       onRiderLogin?.(profile);
       goTo("riderDashboard");
     } catch (e) {
-      setRiderError(e.message || "Invalid rider ID or password. Please try again.");
+      setRiderError(
+        e.message || "Invalid rider ID or password. Please try again.",
+      );
     } finally {
       setChecking(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: "56px 24px 90px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center" }} className="qm-auth-grid">
-      <Reveal><AuthIllustration theme={theme} /></Reveal>
+    <div
+      style={{
+        maxWidth: 1000,
+        margin: "0 auto",
+        padding: "56px 24px 90px",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 48,
+        alignItems: "center",
+      }}
+      className="qm-auth-grid"
+    >
+      <Reveal>
+        <AuthIllustration theme={theme} />
+      </Reveal>
       <Reveal delay={100}>
-        <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 20, padding: 36, maxWidth: 400 }}>
-          <h2 className="qm-display" style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Welcome back</h2>
-          <p style={{ fontSize: 13.5, color: theme.sub, marginBottom: 20 }}>Log in to track orders and reorder in a tap.</p>
+        <div
+          style={{
+            background: theme.card,
+            border: `1px solid ${theme.border}`,
+            borderRadius: 20,
+            padding: 36,
+            maxWidth: 400,
+          }}
+        >
+          <h2
+            className="qm-display"
+            style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}
+          >
+            Welcome back
+          </h2>
+          <p style={{ fontSize: 13.5, color: theme.sub, marginBottom: 20 }}>
+            Log in to track orders and reorder in a tap.
+          </p>
 
           {/* Role toggle */}
-          <div style={{ display: "flex", gap: 8, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 4, marginBottom: 22 }}>
-            {[{ key: "customer", label: "Customer", icon: User }, { key: "rider", label: "Rider", icon: Bike }].map((r) => (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              background: theme.bg,
+              border: `1px solid ${theme.border}`,
+              borderRadius: 12,
+              padding: 4,
+              marginBottom: 22,
+            }}
+          >
+            {[
+              { key: "customer", label: "Customer", icon: User },
+              { key: "rider", label: "Rider", icon: Bike },
+            ].map((r) => (
               <button
                 key={r.key}
                 onClick={() => handleRoleChange(r.key)}
@@ -111,7 +152,9 @@ export function LoginPage({ theme, goTo, onRiderLogin, onCustomerLogin }) {
 
           {role === "customer" ? (
             <>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -126,17 +169,62 @@ export function LoginPage({ theme, goTo, onRiderLogin, onCustomerLogin }) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Password"
                     style={inputStyle(theme)}
-                    onKeyDown={(e) => e.key === "Enter" && handleCustomerSubmit()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleCustomerSubmit()
+                    }
                   />
-                  <button onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: theme.sub }} aria-label="toggle password">
+                  <button
+                    onClick={() => setShowPw(!showPw)}
+                    style={{
+                      position: "absolute",
+                      right: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: theme.sub,
+                    }}
+                    aria-label="toggle password"
+                  >
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 6, color: theme.sub }}><input type="checkbox" /> Remember me</label>
-                  <a href="#" style={{ color: C.primary, textDecoration: "none", fontWeight: 600 }}>Forgot password?</a>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 12.5,
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      color: theme.sub,
+                    }}
+                  >
+                    <input type="checkbox" /> Remember me
+                  </label>
+                  <a
+                    href="#"
+                    style={{
+                      color: C.primary,
+                      textDecoration: "none",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Forgot password?
+                  </a>
                 </div>
-                {customerError && <div style={{ fontSize: 12.5, color: C.danger, fontWeight: 600 }}>{customerError}</div>}
+                {customerError && (
+                  <div
+                    style={{ fontSize: 12.5, color: C.danger, fontWeight: 600 }}
+                  >
+                    {customerError}
+                  </div>
+                )}
                 <button
                   onClick={handleCustomerSubmit}
                   disabled={customerChecking}
@@ -157,13 +245,34 @@ export function LoginPage({ theme, goTo, onRiderLogin, onCustomerLogin }) {
                   {customerChecking ? "Logging in…" : "Log in"}
                 </button>
               </div>
-              <div style={{ textAlign: "center", fontSize: 13, color: theme.sub, marginTop: 20 }}>
-                Don't have an account? <button onClick={() => goTo("register")} style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, cursor: "pointer" }}>Register</button>
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: theme.sub,
+                  marginTop: 20,
+                }}
+              >
+                Don't have an account?{" "}
+                <button
+                  onClick={() => goTo("register")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: C.primary,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Register
+                </button>
               </div>
             </>
           ) : (
             <>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
                 <input
                   value={riderId}
                   onChange={(e) => setRiderId(e.target.value)}
@@ -180,11 +289,30 @@ export function LoginPage({ theme, goTo, onRiderLogin, onCustomerLogin }) {
                     style={inputStyle(theme)}
                     onKeyDown={(e) => e.key === "Enter" && handleRiderSubmit()}
                   />
-                  <button onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: theme.sub }} aria-label="toggle password">
+                  <button
+                    onClick={() => setShowPw(!showPw)}
+                    style={{
+                      position: "absolute",
+                      right: 12,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: theme.sub,
+                    }}
+                    aria-label="toggle password"
+                  >
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {riderError && <div style={{ fontSize: 12.5, color: C.danger, fontWeight: 600 }}>{riderError}</div>}
+                {riderError && (
+                  <div
+                    style={{ fontSize: 12.5, color: C.danger, fontWeight: 600 }}
+                  >
+                    {riderError}
+                  </div>
+                )}
                 <button
                   onClick={handleRiderSubmit}
                   disabled={checking}
@@ -205,11 +333,42 @@ export function LoginPage({ theme, goTo, onRiderLogin, onCustomerLogin }) {
                   {checking ? "Checking…" : "Log in as rider"}
                 </button>
               </div>
-              <div style={{ fontSize: 11.5, color: theme.sub, background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: 10, padding: "10px 12px", marginTop: 18, lineHeight: 1.6 }}>
-                Demo credentials — ID <strong>RID-2291</strong>, password <strong>rider123</strong>.
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: theme.sub,
+                  background: theme.bg,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  marginTop: 18,
+                  lineHeight: 1.6,
+                }}
+              >
+                Demo credentials — ID <strong>RID-2291</strong>, password{" "}
+                <strong>rider123</strong>.
               </div>
-              <div style={{ textAlign: "center", fontSize: 13, color: theme.sub, marginTop: 20 }}>
-                Not a rider yet? <button onClick={() => goTo("register")} style={{ background: "none", border: "none", color: C.primary, fontWeight: 700, cursor: "pointer" }}>Learn how to join</button>
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: theme.sub,
+                  marginTop: 20,
+                }}
+              >
+                Not a rider yet?{" "}
+                <button
+                  onClick={() => goTo("register")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: C.primary,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Learn how to join
+                </button>
               </div>
             </>
           )}
