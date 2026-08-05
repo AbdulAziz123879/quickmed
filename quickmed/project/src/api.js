@@ -45,6 +45,10 @@ export const api = {
   //  }),
   registerCustomer: (data) =>
   request("/api/customers/register", { method: "POST", body: JSON.stringify(data) }),
+
+  updateCustomer: (id, profile) =>
+  request(`/api/customers/${id}`, { method: "PUT", body: JSON.stringify(profile) }),
+
   getOrders: () => request("/api/orders"),
 
   createOrder: (order) =>
@@ -54,12 +58,17 @@ export const api = {
   // "Available" means the store has marked the order "Ready for pickup" and no rider
   // has claimed it yet.
   getAvailableOrders: () => request("/api/riders/available-orders"),
+
   acceptOrder: (riderId, orderId) =>
     request(`/api/riders/${riderId}/orders/${orderId}/accept`, { method: "POST" }),
+
   getActiveOrder: (riderId) => request(`/api/riders/${riderId}/active-order`),
+
   completeOrder: (riderId, orderId) =>
     request(`/api/riders/${riderId}/orders/${orderId}/complete`, { method: "POST" }),
+
   getRiderHistory: (riderId) => request(`/api/riders/${riderId}/history`),
+
     googleAuth: (idToken) =>
     request("/api/customers/google-auth", {
       method: "POST",

@@ -118,6 +118,7 @@ export default function QuickMedApp() {
   }, [goTo]);
 
   const handleCustomerLogin = useCallback((c) => setCustomer(c), []);
+  const handleCustomerUpdate = useCallback((c) => setCustomer(c), []);
   const handleCustomerLogout = useCallback(() => {
     setCustomer(null);
     goTo("home");
@@ -247,6 +248,7 @@ export default function QuickMedApp() {
     body = (
       <RegisterPage
         theme={theme}
+         dark={dark}
         goTo={goTo}
         onCustomerLogin={handleCustomerLogin}
       />
@@ -261,6 +263,7 @@ export default function QuickMedApp() {
         addToCart={addToCart}
         customer={customer}
         onLogout={handleCustomerLogout}
+        onUpdateCustomer={handleCustomerUpdate}
       />
     );
   else if (page === "tracking") body = <TrackingPage theme={theme} />;

@@ -250,6 +250,7 @@ app.post("/api/customers/register", async (req, res) => {
     const name = String(req.body?.name ?? "").trim();
     const email = String(req.body?.email ?? "").trim();
     const phone = String(req.body?.phone ?? "").trim();
+    const address = String(req.body?.address ?? "").trim();
     const password = String(req.body?.password ?? "");
 
     if (!name || !email || !password) {
@@ -285,6 +286,31 @@ app.post("/api/customers/register", async (req, res) => {
   } catch (err) {
     console.error("[quickmed-backend] /api/customers/register error:", err);
     res.status(500).json({ error: "Failed to create account." });
+  }
+});
+
+/* PUT /api/customers/:id
+   Body: { name?, phone?, address? }
+   Lets a logged-in customer fill in missing profile fields. */
+app.put("/api/customers/:id", async (req, res) => {
+  try {
+    const { name, phone, address } = req.body || {};
+    const { rows } = await pool.query(
+      `UPDATE customers
+       SET name = COALESCE($1, name),
+           phone = COALESCE($2, phone),
+           address = COALESCE($3, address)
+       WHERE id = $4
+       RETURNING id, name, email, phone, address, created_at`,
+      [name, phone, address, req.params.id],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Customer not found." });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("[quickmed-backend] PUT /api/customers/:id error:", err);
+    res.status(500).json({ error: "Failed to update customer profile." });
   }
 });
 

@@ -19,7 +19,9 @@ export function GoogleAuthButton({ onSuccess, onError, dark }) {
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
-      console.warn("VITE_GOOGLE_CLIENT_ID is not set — Google sign-in disabled.");
+      console.warn(
+        "VITE_GOOGLE_CLIENT_ID is not set — Google sign-in disabled.",
+      );
       return;
     }
 
@@ -41,8 +43,7 @@ export function GoogleAuthButton({ onSuccess, onError, dark }) {
         });
         initializedRef.current = true;
       }
-      // Clear any previously-rendered button before re-rendering (e.g. on
-      // theme change) so we don't stack duplicate iframes in the same node.
+      
       btnRef.current.innerHTML = "";
       window.google.accounts.id.renderButton(btnRef.current, {
         type: "standard",
@@ -67,5 +68,10 @@ export function GoogleAuthButton({ onSuccess, onError, dark }) {
   }, [dark]);
 
   if (!GOOGLE_CLIENT_ID) return null;
-  return <div ref={btnRef} style={{ display: "flex", justifyContent: "center", margin: "4px 0" }} />;
+  return (
+    <div
+      ref={btnRef}
+      style={{ display: "flex", justifyContent: "center", margin: "4px 0" }}
+    />
+  );
 }

@@ -1,22 +1,28 @@
+
+
+
 // /* RegisterPage.jsx
 //    User registration form, with a role toggle. Customers now register
-//    against PostgreSQL via /api/customers/register. Riders are
-//    pre-registered partner accounts (see riderData.js / the riders table),
-//    so choosing "Rider" here links out to rider login/contact instead of
-//    a real signup form.
+//    against PostgreSQL via /api/customers/register, or instantly via
+//    Google Sign-In (/api/customers/google-auth) — both return the same
+//    customer profile shape. Riders are pre-registered partner accounts
+//    (see riderData.js / the riders table), so choosing "Rider" here
+//    links out to rider login/contact instead of a real signup form.
 // */
 // import { useState } from "react";
 // import { User, Bike } from "lucide-react";
 // import { C, inputStyle } from "../theme";
 // import { Reveal } from "../components/Common";
 // import { AuthIllustration } from "../components/AuthIllustration";
+// import { GoogleAuthButton } from "../components/GoogleAuthButton";
 // import { api } from "../api";
 
-// export function RegisterPage({ theme, goTo, onCustomerLogin }) {
+// export function RegisterPage({ theme, dark, goTo, onCustomerLogin }) {
 //   const [role, setRole] = useState("customer"); // "customer" | "rider"
 //   const [name, setName] = useState("");
 //   const [email, setEmail] = useState("");
 //   const [phone, setPhone] = useState("");
+//   const [address, setAddress] = useState("");
 //   const [pw, setPw] = useState("");
 //   const [error, setError] = useState("");
 //   const [submitting, setSubmitting] = useState(false);
@@ -42,6 +48,7 @@
 //         name,
 //         email,
 //         phone,
+//         address,
 //         password: pw,
 //       });
 //       onCustomerLogin?.(profile);
@@ -135,6 +142,28 @@
 
 //           {role === "customer" ? (
 //             <>
+//               {/* Google Sign-In */}
+//               <GoogleAuthButton
+//                 dark={dark}
+//                 onSuccess={(profile) => {
+//                   onCustomerLogin?.(profile);
+//                   goTo("dashboard");
+//                 }}
+//                 onError={setError}
+//               />
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   alignItems: "center",
+//                   gap: 10,
+//                   margin: "18px 0",
+//                 }}
+//               >
+//                 <div style={{ flex: 1, height: 1, background: theme.border }} />
+//                 <span style={{ fontSize: 12, color: theme.sub }}>or</span>
+//                 <div style={{ flex: 1, height: 1, background: theme.border }} />
+//               </div>
+
 //               <div
 //                 style={{ display: "flex", flexDirection: "column", gap: 14 }}
 //               >
@@ -154,6 +183,12 @@
 //                   value={phone}
 //                   onChange={(e) => setPhone(e.target.value)}
 //                   placeholder="Phone number"
+//                   style={inputStyle(theme)}
+//                 />
+//                 <input
+//                   value={address}
+//                   onChange={(e) => setAddress(e.target.value)}
+//                   placeholder="Delivery address"
 //                   style={inputStyle(theme)}
 //                 />
 //                 <input
@@ -315,6 +350,11 @@
    customer profile shape. Riders are pre-registered partner accounts
    (see riderData.js / the riders table), so choosing "Rider" here
    links out to rider login/contact instead of a real signup form.
+
+   All customer fields (name, email, phone, address, password) are now
+   mandatory for manual sign-up — Google sign-up still only provides
+   name/email/etc from Google and prompts for the rest later from the
+   dashboard's "Complete your registration" notification.
 */
 import { useState } from "react";
 import { User, Bike } from "lucide-react";
@@ -329,6 +369,7 @@ export function RegisterPage({ theme, dark, goTo, onCustomerLogin }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [pw, setPw] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -339,8 +380,14 @@ export function RegisterPage({ theme, dark, goTo, onCustomerLogin }) {
   const strengthColor = ["", C.danger, "#F59E0B", C.success][strength];
 
   const handleSubmit = async () => {
-    if (!name.trim() || !email.trim() || !pw) {
-      setError("Fill in your name, email and password to continue.");
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !phone.trim() ||
+      !address.trim() ||
+      !pw
+    ) {
+      setError("Please fill in all fields to continue.");
       return;
     }
     if (pw.length < 6) {
@@ -354,6 +401,7 @@ export function RegisterPage({ theme, dark, goTo, onCustomerLogin }) {
         name,
         email,
         phone,
+        address,
         password: pw,
       });
       onCustomerLogin?.(profile);
@@ -475,26 +523,37 @@ export function RegisterPage({ theme, dark, goTo, onCustomerLogin }) {
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Full name"
+                  placeholder="Full name *"
+                  required
                   style={inputStyle(theme)}
                 />
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
+                  placeholder="Email address *"
+                  required
                   style={inputStyle(theme)}
                 />
                 <input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Phone number"
+                  placeholder="Phone number *"
+                  required
+                  style={inputStyle(theme)}
+                />
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Delivery address *"
+                  required
                   style={inputStyle(theme)}
                 />
                 <input
                   type="password"
                   value={pw}
                   onChange={(e) => setPw(e.target.value)}
-                  placeholder="Create password"
+                  placeholder="Create password *"
+                  required
                   style={inputStyle(theme)}
                 />
                 {pw.length > 0 && (
