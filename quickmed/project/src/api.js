@@ -60,4 +60,9 @@ export const api = {
   completeOrder: (riderId, orderId) =>
     request(`/api/riders/${riderId}/orders/${orderId}/complete`, { method: "POST" }),
   getRiderHistory: (riderId) => request(`/api/riders/${riderId}/history`),
+    googleAuth: (idToken) =>
+    request("/api/customers/google-auth", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    }),
 };

@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { pool } from "./db.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { OAuth2Client } from "google-auth-library";
 
 dotenv.config();
 console.log("API Key loaded:", process.env.OPENROUTER_API_KEY ? "YES" : "NO");
@@ -17,6 +18,9 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL =
   process.env.OPENROUTER_MODEL || "google/gemma-4-26b-a4b-it:free";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const OPENROUTER_HEADERS = (extra = {}) => ({
   "Content-Type": "application/json",
@@ -315,6 +319,55 @@ app.post("/api/customers/login", async (req, res) => {
   } catch (err) {
     console.error("[quickmed-backend] /api/customers/login error:", err);
     res.status(500).json({ error: "Failed to authenticate." });
+  }
+});
+
+/* POST /api/customers/google-auth
+   Body: { idToken }
+   Verifies the token with Google's servers (signature, audience, expiry,
+   and email_verified are all checked here — this can't be faked from the
+   client). Logs in an existing customer or creates a new one. */
+app.post("/api/customers/google-auth", async (req, res) => {
+  try {
+    const { idToken } = req.body || {};
+    if (!idToken) return res.status(400).json({ error: "Missing Google ID token." });
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ error: "Server is missing GOOGLE_CLIENT_ID." });
+    }
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
+      payload = ticket.getPayload();
+    } catch {
+      return res.status(401).json({ error: "Invalid or expired Google sign-in. Please try again." });
+    }
+
+    if (!payload?.email) return res.status(401).json({ error: "Google didn't return an email." });
+    if (!payload.email_verified) return res.status(401).json({ error: "This Google account's email isn't verified." });
+
+    const email = payload.email.toLowerCase();
+    const name = payload.name || email.split("@")[0];
+
+    const existing = await pool.query(
+      "SELECT id, name, email, phone, created_at FROM customers WHERE LOWER(email) = LOWER($1)",
+      [email],
+    );
+    if (existing.rows.length > 0) return res.json(existing.rows[0]);
+
+    // No password to store for a Google-only account — save a random,
+    // never-shared hash as a placeholder (they always sign back in via Google).
+    const hashed = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+    const { rows } = await pool.query(
+      `INSERT INTO customers (name, email, phone, password, google_id)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, name, email, phone, created_at`,
+      [name, email, null, hashed, payload.sub],
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error("[quickmed-backend] /api/customers/google-auth error:", err);
+    res.status(500).json({ error: "Google sign-in failed." });
   }
 });
 
