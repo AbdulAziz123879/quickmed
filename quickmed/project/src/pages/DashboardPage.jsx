@@ -1,6 +1,17 @@
+
+
+
 // /* DashboardPage.jsx
 //    Customer dashboard — shows real logged-in customer info and lets them
 //    log out via the sidebar (wired to onLogout from App.jsx).
+
+//    NEW: if the logged-in customer is missing phone and/or address (e.g.
+//    they signed up via Google, which only provides name/email), a
+//    notification badge appears on "Notifications" and a banner shows on
+//    the dashboard prompting them to complete their registration. Clicking
+//    either opens a modal that asks only for the fields that are actually
+//    missing, then saves via api.updateCustomer and refreshes the customer
+//    object app-wide via onUpdateCustomer (passed down from App.jsx).
 // */
 // import { useState, useEffect } from "react";
 // import {
@@ -17,8 +28,13 @@
 //   Siren,
 //   ShoppingCart,
 //   Gift,
+//   MapPin,
+//   Phone,
+//   AlertCircle,
+//   X,
+//   Check,
 // } from "lucide-react";
-// import { C } from "../theme";
+// import { C, inputStyle } from "../theme";
 // import { api } from "../api";
 // import { Reveal, Badge } from "../components/Common";
 // import { PrescriptionUploadButton } from "../components/PrescriptionUploadButton";
@@ -31,8 +47,11 @@
 //   addToCart,
 //   customer,
 //   onLogout,
+//   onUpdateCustomer,
 // }) {
 //   const [orders, setOrders] = useState([]);
+//   const [view, setView] = useState("dashboard"); // "dashboard" | "notifications"
+//   const [completeModalOpen, setCompleteModalOpen] = useState(false);
 
 //   useEffect(() => {
 //     api
@@ -41,13 +60,35 @@
 //       .catch((e) => console.error("Failed to load orders:", e));
 //   }, []);
 
+//   // Figure out which required fields are missing on the customer record.
+//   // Google sign-ups only ever get name + email, so phone/address are
+//   // commonly empty for those accounts.
+//   const missingFields = [];
+//   if (!customer?.phone) missingFields.push("phone");
+//   if (!customer?.address) missingFields.push("address");
+
+//   const notifications = [];
+//   if (missingFields.length > 0) {
+//     notifications.push({
+//       id: "complete-profile",
+//       title: "Complete your registration",
+//       desc: `Add your ${missingFields.join(" and ")} to finish setting up your account.`,
+//       action: () => setCompleteModalOpen(true),
+//     });
+//   }
+
 //   const wishlistCount = Object.values(wishlist).filter(Boolean).length;
 
 //   const sideItems = [
-//     { icon: HomeIcon, label: "Dashboard" },
+//     { icon: HomeIcon, label: "Dashboard", view: "dashboard" },
 //     { icon: Pill, label: "Medicines", go: "medicines" },
 //     { icon: Package, label: "Orders" },
-//     { icon: Bell, label: "Notifications" },
+//     {
+//       icon: Bell,
+//       label: "Notifications",
+//       view: "notifications",
+//       badge: notifications.length,
+//     },
 //     { icon: Settings, label: "Settings" },
 //   ];
 
@@ -75,207 +116,551 @@
 //         style={{ display: "flex", flexDirection: "column", gap: 4 }}
 //         className="qm-dash-sidebar"
 //       >
-//         {sideItems.map((it) => (
-//           <button
-//             key={it.label}
-//             onClick={() =>
-//               it.action === "logout" ? onLogout?.() : it.go && goTo(it.go)
-//             }
-//             className="qm-btn"
-//             style={{
-//               display: "flex",
-//               alignItems: "center",
-//               gap: 12,
-//               background: it.label === "Dashboard" ? "#EFF6FF" : "none",
-//               border: "none",
-//               padding: "11px 14px",
-//               borderRadius: 10,
-//               cursor: "pointer",
-//               fontSize: 13.5,
-//               fontWeight: 600,
-//               color: it.label === "Dashboard" ? C.primary : theme.text,
-//               textAlign: "left",
-//             }}
-//           >
-//             <it.icon size={17} /> {it.label}
-//           </button>
-//         ))}
-//       </div>
-//       <div>
-//         <Reveal>
-//           <div
-//             style={{
-//               display: "flex",
-//               justifyContent: "space-between",
-//               alignItems: "center",
-//               marginBottom: 28,
-//               flexWrap: "wrap",
-//               gap: 12,
-//             }}
-//           >
-//             <div>
-//               <h1
-//                 className="qm-display"
-//                 style={{ fontSize: 24, fontWeight: 800 }}
-//               >
-//                 Welcome back, {displayName}
-//               </h1>
-//               <p style={{ color: theme.sub, fontSize: 13.5, marginTop: 4 }}>
-//                 Here's what's happening with your health today.
-//               </p>
-//             </div>
-//             <div
+//         {sideItems.map((it) => {
+//           const active = it.view ? view === it.view : false;
+//           return (
+//             <button
+//               key={it.label}
+//               onClick={() => {
+//                 if (it.view) setView(it.view);
+//                 else if (it.action === "logout") onLogout?.();
+//                 else if (it.go) goTo(it.go);
+//               }}
+//               className="qm-btn"
 //               style={{
-//                 width: 42,
-//                 height: 42,
-//                 borderRadius: "50%",
-//                 background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`,
 //                 display: "flex",
 //                 alignItems: "center",
-//                 justifyContent: "center",
-//                 color: "#fff",
-//                 fontWeight: 800,
+//                 gap: 12,
+//                 background: active ? "#EFF6FF" : "none",
+//                 border: "none",
+//                 padding: "11px 14px",
+//                 borderRadius: 10,
+//                 cursor: "pointer",
+//                 fontSize: 13.5,
+//                 fontWeight: 600,
+//                 color: active ? C.primary : theme.text,
+//                 textAlign: "left",
+//                 position: "relative",
 //               }}
 //             >
-//               {initials}
-//             </div>
-//           </div>
-//         </Reveal>
-//         <div
-//           style={{
-//             display: "grid",
-//             gridTemplateColumns: "repeat(4,1fr)",
-//             gap: 16,
-//             marginBottom: 32,
-//           }}
-//           className="qm-dash-stats"
-//         >
-//           {[
-//             {
-//               label: "Orders",
-//               value: orders.length,
-//               icon: Package,
-//               tone: "#EFF6FF",
-//               iconColor: C.primary,
-//             },
-//             {
-//               label: "Cart items",
-//               value: cart.length,
-//               icon: ShoppingCart,
-//               tone: "#ECFDF5",
-//               iconColor: "#047857",
-//             },
-//             {
-//               label: "Wishlist",
-//               value: wishlistCount,
-//               icon: Heart,
-//               tone: "#FEF2F2",
-//               iconColor: C.danger,
-//             },
-//             {
-//               label: "Reward points",
-//               value: 240,
-//               icon: Gift,
-//               tone: "#ECFEFF",
-//               iconColor: "#0E7490",
-//             },
-//           ].map((s, i) => (
-//             <Reveal key={s.label} delay={i * 60}>
-//               <div
-//                 style={{
-//                   background: theme.card,
-//                   border: `1px solid ${theme.border}`,
-//                   borderRadius: 16,
-//                   padding: 18,
-//                 }}
-//               >
-//                 <div
+//               <it.icon size={17} /> {it.label}
+//               {it.badge > 0 && (
+//                 <span
 //                   style={{
-//                     width: 36,
-//                     height: 36,
-//                     borderRadius: 10,
-//                     background: s.tone,
+//                     marginLeft: "auto",
+//                     background: C.danger,
+//                     color: "#fff",
+//                     fontSize: 10,
+//                     fontWeight: 800,
+//                     borderRadius: 999,
+//                     minWidth: 16,
+//                     height: 16,
 //                     display: "flex",
 //                     alignItems: "center",
 //                     justifyContent: "center",
-//                     marginBottom: 12,
+//                     padding: "0 4px",
 //                   }}
 //                 >
-//                   <s.icon size={17} color={s.iconColor} />
-//                 </div>
-//                 <div style={{ fontSize: 20, fontWeight: 800 }}>{s.value}</div>
-//                 <div style={{ fontSize: 12, color: theme.sub }}>{s.label}</div>
-//               </div>
-//             </Reveal>
-//           ))}
-//         </div>
-//         {/* <Reveal>
-//           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 32 }}>
-//             <PrescriptionUploadButton theme={theme} variant="pill" addToCart={addToCart} />
-//             {[{ label: "AI scanner", icon: ScanLine }, { label: "Emergency order", icon: Siren }, { label: "Refill medicine", icon: Package }].map((a) => (
-//               <button key={a.label} className="qm-btn" style={{ display: "flex", alignItems: "center", gap: 8, background: theme.card, border: `1px solid ${theme.border}`, padding: "12px 18px", borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: "pointer", color: theme.text }}><a.icon size={15} color={C.primary} /> {a.label}</button>
-//             ))}
-//           </div>
-//         </Reveal> */}
-//         <Reveal>
-//           <div
-//             style={{
-//               display: "flex",
-//               justifyContent: "center",
-//               marginBottom: 36,
-//             }}
-//           >
-//             <PrescriptionUploadButton
-//               theme={theme}
-//               variant="button"
-//               label="Upload Prescription"
-//               addToCart={addToCart}
-//             />
-//           </div>
-//         </Reveal>
-//         <Reveal>
-//           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>
-//             Recent orders
-//           </div>
-//           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-//             {orders.map((o) => (
+//                   {it.badge}
+//                 </span>
+//               )}
+//             </button>
+//           );
+//         })}
+//       </div>
+
+//       <div>
+//         {view === "notifications" ? (
+//           <NotificationsPanel theme={theme} notifications={notifications} />
+//         ) : (
+//           <>
+//             <Reveal>
 //               <div
-//                 key={o.id}
-//                 onClick={() => goTo("tracking")}
 //                 style={{
-//                   cursor: "pointer",
-//                   background: theme.card,
-//                   border: `1px solid ${theme.border}`,
-//                   borderRadius: 14,
-//                   padding: "14px 18px",
 //                   display: "flex",
-//                   alignItems: "center",
 //                   justifyContent: "space-between",
-//                   gap: 12,
+//                   alignItems: "center",
+//                   marginBottom: 28,
 //                   flexWrap: "wrap",
+//                   gap: 12,
 //                 }}
 //               >
 //                 <div>
-//                   <div style={{ fontSize: 13.5, fontWeight: 700 }}>
-//                     {o.id}{" "}
-//                     <span style={{ color: theme.sub, fontWeight: 500 }}>
-//                       · {o.order_date}
-//                     </span>
-//                   </div>
-//                   <div style={{ fontSize: 12, color: theme.sub }}>
-//                     {o.items}
-//                   </div>
+//                   <h1
+//                     className="qm-display"
+//                     style={{ fontSize: 24, fontWeight: 800 }}
+//                   >
+//                     Welcome back, {displayName}
+//                   </h1>
+//                   <p style={{ color: theme.sub, fontSize: 13.5, marginTop: 4 }}>
+//                     Here's what's happening with your health today.
+//                   </p>
 //                 </div>
-//                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-//                   <span style={{ fontSize: 13.5, fontWeight: 700 }}>
-//                     ৳{o.total}
-//                   </span>
-//                   <Badge tone="secondary">{o.status}</Badge>
+//                 <div
+//                   style={{
+//                     width: 42,
+//                     height: 42,
+//                     borderRadius: "50%",
+//                     background: `linear-gradient(135deg, ${C.primary}, ${C.accent})`,
+//                     display: "flex",
+//                     alignItems: "center",
+//                     justifyContent: "center",
+//                     color: "#fff",
+//                     fontWeight: 800,
+//                   }}
+//                 >
+//                   {initials}
 //                 </div>
 //               </div>
-//             ))}
+//             </Reveal>
+
+//             {notifications.length > 0 && (
+//               <Reveal>
+//                 <div
+//                   onClick={() => setView("notifications")}
+//                   style={{
+//                     display: "flex",
+//                     alignItems: "center",
+//                     gap: 12,
+//                     background: "#FFFBEB",
+//                     border: "1px solid #FDE68A",
+//                     borderRadius: 14,
+//                     padding: "14px 18px",
+//                     marginBottom: 24,
+//                     cursor: "pointer",
+//                   }}
+//                 >
+//                   <AlertCircle size={18} color="#B45309" />
+//                   <div style={{ flex: 1 }}>
+//                     <div
+//                       style={{
+//                         fontSize: 13.5,
+//                         fontWeight: 700,
+//                         color: "#92400E",
+//                       }}
+//                     >
+//                       Your profile is incomplete
+//                     </div>
+//                     <div style={{ fontSize: 12, color: "#92400E", marginTop: 2 }}>
+//                       Tap to complete your registration.
+//                     </div>
+//                   </div>
+//                 </div>
+//               </Reveal>
+//             )}
+
+//             <div
+//               style={{
+//                 display: "grid",
+//                 gridTemplateColumns: "repeat(4,1fr)",
+//                 gap: 16,
+//                 marginBottom: 32,
+//               }}
+//               className="qm-dash-stats"
+//             >
+//               {[
+//                 {
+//                   label: "Orders",
+//                   value: orders.length,
+//                   icon: Package,
+//                   tone: "#EFF6FF",
+//                   iconColor: C.primary,
+//                 },
+//                 {
+//                   label: "Cart items",
+//                   value: cart.length,
+//                   icon: ShoppingCart,
+//                   tone: "#ECFDF5",
+//                   iconColor: "#047857",
+//                 },
+//                 {
+//                   label: "Wishlist",
+//                   value: wishlistCount,
+//                   icon: Heart,
+//                   tone: "#FEF2F2",
+//                   iconColor: C.danger,
+//                 },
+//                 {
+//                   label: "Reward points",
+//                   value: 240,
+//                   icon: Gift,
+//                   tone: "#ECFEFF",
+//                   iconColor: "#0E7490",
+//                 },
+//               ].map((s, i) => (
+//                 <Reveal key={s.label} delay={i * 60}>
+//                   <div
+//                     style={{
+//                       background: theme.card,
+//                       border: `1px solid ${theme.border}`,
+//                       borderRadius: 16,
+//                       padding: 18,
+//                     }}
+//                   >
+//                     <div
+//                       style={{
+//                         width: 36,
+//                         height: 36,
+//                         borderRadius: 10,
+//                         background: s.tone,
+//                         display: "flex",
+//                         alignItems: "center",
+//                         justifyContent: "center",
+//                         marginBottom: 12,
+//                       }}
+//                     >
+//                       <s.icon size={17} color={s.iconColor} />
+//                     </div>
+//                     <div style={{ fontSize: 20, fontWeight: 800 }}>{s.value}</div>
+//                     <div style={{ fontSize: 12, color: theme.sub }}>{s.label}</div>
+//                   </div>
+//                 </Reveal>
+//               ))}
+//             </div>
+
+//             <Reveal>
+//               <div
+//                 style={{
+//                   display: "flex",
+//                   justifyContent: "center",
+//                   marginBottom: 36,
+//                 }}
+//               >
+//                 <PrescriptionUploadButton
+//                   theme={theme}
+//                   variant="button"
+//                   label="Upload Prescription"
+//                   addToCart={addToCart}
+//                 />
+//               </div>
+//             </Reveal>
+
+//             <Reveal>
+//               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>
+//                 Recent orders
+//               </div>
+//               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+//                 {orders.map((o) => (
+//                   <div
+//                     key={o.id}
+//                     onClick={() => goTo("tracking")}
+//                     style={{
+//                       cursor: "pointer",
+//                       background: theme.card,
+//                       border: `1px solid ${theme.border}`,
+//                       borderRadius: 14,
+//                       padding: "14px 18px",
+//                       display: "flex",
+//                       alignItems: "center",
+//                       justifyContent: "space-between",
+//                       gap: 12,
+//                       flexWrap: "wrap",
+//                     }}
+//                   >
+//                     <div>
+//                       <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+//                         {o.id}{" "}
+//                         <span style={{ color: theme.sub, fontWeight: 500 }}>
+//                           · {o.order_date}
+//                         </span>
+//                       </div>
+//                       <div style={{ fontSize: 12, color: theme.sub }}>
+//                         {o.items}
+//                       </div>
+//                     </div>
+//                     <div
+//                       style={{ display: "flex", alignItems: "center", gap: 16 }}
+//                     >
+//                       <span style={{ fontSize: 13.5, fontWeight: 700 }}>
+//                         ৳{o.total}
+//                       </span>
+//                       <Badge tone="secondary">{o.status}</Badge>
+//                     </div>
+//                   </div>
+//                 ))}
+//               </div>
+//             </Reveal>
+//           </>
+//         )}
+//       </div>
+
+//       {completeModalOpen && (
+//         <CompleteProfileModal
+//           theme={theme}
+//           customer={customer}
+//           missingFields={missingFields}
+//           onClose={() => setCompleteModalOpen(false)}
+//           onSaved={(updated) => {
+//             onUpdateCustomer?.(updated);
+//             setCompleteModalOpen(false);
+//           }}
+//         />
+//       )}
+//     </div>
+//   );
+// }
+
+// /* ---------- Notifications panel ---------- */
+// function NotificationsPanel({ theme, notifications }) {
+//   return (
+//     <div>
+//       <div
+//         className="qm-display"
+//         style={{ fontSize: 20, fontWeight: 800, marginBottom: 18 }}
+//       >
+//         Notifications
+//       </div>
+//       {notifications.length === 0 ? (
+//         <div
+//           style={{
+//             textAlign: "center",
+//             padding: "60px 0",
+//             color: theme.sub,
+//             fontSize: 13.5,
+//           }}
+//         >
+//           <Bell size={28} style={{ marginBottom: 12, opacity: 0.5 }} />
+//           <div>You're all caught up — no notifications right now.</div>
+//         </div>
+//       ) : (
+//         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+//           {notifications.map((n) => (
+//             <div
+//               key={n.id}
+//               onClick={n.action}
+//               style={{
+//                 display: "flex",
+//                 alignItems: "center",
+//                 gap: 14,
+//                 background: theme.card,
+//                 border: `1px solid ${theme.border}`,
+//                 borderRadius: 14,
+//                 padding: "16px 18px",
+//                 cursor: n.action ? "pointer" : "default",
+//                 flexWrap: "wrap",
+//               }}
+//             >
+//               <div
+//                 style={{
+//                   width: 38,
+//                   height: 38,
+//                   borderRadius: 10,
+//                   background: "#FFFBEB",
+//                   display: "flex",
+//                   alignItems: "center",
+//                   justifyContent: "center",
+//                   flexShrink: 0,
+//                 }}
+//               >
+//                 <AlertCircle size={18} color="#B45309" />
+//               </div>
+//               <div style={{ flex: 1, minWidth: 180 }}>
+//                 <div style={{ fontSize: 13.5, fontWeight: 700 }}>{n.title}</div>
+//                 <div style={{ fontSize: 12, color: theme.sub, marginTop: 2 }}>
+//                   {n.desc}
+//                 </div>
+//               </div>
+//               {n.action && (
+//                 <button
+//                   className="qm-btn"
+//                   style={{
+//                     background: C.primary,
+//                     color: "#fff",
+//                     border: "none",
+//                     padding: "8px 16px",
+//                     borderRadius: 999,
+//                     fontSize: 12.5,
+//                     fontWeight: 700,
+//                     cursor: "pointer",
+//                     whiteSpace: "nowrap",
+//                   }}
+//                 >
+//                   Complete now
+//                 </button>
+//               )}
+//             </div>
+//           ))}
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+// /* ---------- Complete profile modal ---------- */
+// function CompleteProfileModal({ theme, customer, missingFields, onClose, onSaved }) {
+//   const [phone, setPhone] = useState(customer?.phone || "");
+//   const [address, setAddress] = useState(customer?.address || "");
+//   const [saving, setSaving] = useState(false);
+//   const [error, setError] = useState("");
+
+//   const needsPhone = missingFields.includes("phone");
+//   const needsAddress = missingFields.includes("address");
+
+//   const submit = async () => {
+//     if (needsPhone && !phone.trim()) {
+//       setError("Phone number is required.");
+//       return;
+//     }
+//     if (needsAddress && !address.trim()) {
+//       setError("Address is required.");
+//       return;
+//     }
+//     setError("");
+//     setSaving(true);
+//     try {
+//       const payload = {};
+//       if (needsPhone) payload.phone = phone.trim();
+//       if (needsAddress) payload.address = address.trim();
+//       const updated = await api.updateCustomer(customer.id, payload);
+//       onSaved(updated);
+//     } catch (e) {
+//       setError(e.message || "Failed to save. Please try again.");
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   return (
+//     <div
+//       onClick={onClose}
+//       style={{
+//         position: "fixed",
+//         inset: 0,
+//         background: "rgba(15,23,42,0.55)",
+//         zIndex: 300,
+//         display: "flex",
+//         alignItems: "center",
+//         justifyContent: "center",
+//         padding: 20,
+//       }}
+//     >
+//       <div
+//         onClick={(e) => e.stopPropagation()}
+//         style={{
+//           background: theme.card,
+//           border: `1px solid ${theme.border}`,
+//           borderRadius: 20,
+//           padding: 26,
+//           width: "100%",
+//           maxWidth: 400,
+//         }}
+//       >
+//         <div
+//           style={{
+//             display: "flex",
+//             alignItems: "center",
+//             justifyContent: "space-between",
+//             marginBottom: 18,
+//           }}
+//         >
+//           <div style={{ fontSize: 16, fontWeight: 800, color: theme.text }}>
+//             Complete your registration
 //           </div>
-//         </Reveal>
+//           <button
+//             onClick={onClose}
+//             style={{
+//               background: "none",
+//               border: "none",
+//               cursor: "pointer",
+//               color: theme.sub,
+//             }}
+//             aria-label="Close"
+//           >
+//             <X size={18} />
+//           </button>
+//         </div>
+//         <div
+//           style={{
+//             fontSize: 12.5,
+//             color: theme.sub,
+//             marginBottom: 18,
+//             lineHeight: 1.6,
+//           }}
+//         >
+//           We're missing a few details on your account. Add them below to finish
+//           setting up.
+//         </div>
+
+//         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+//           {needsPhone && (
+//             <div style={{ position: "relative" }}>
+//               <Phone
+//                 size={15}
+//                 style={{
+//                   position: "absolute",
+//                   left: 14,
+//                   top: "50%",
+//                   transform: "translateY(-50%)",
+//                   color: theme.sub,
+//                   pointerEvents: "none",
+//                 }}
+//               />
+//               <input
+//                 value={phone}
+//                 onChange={(e) => setPhone(e.target.value)}
+//                 placeholder="Phone number"
+//                 style={{ ...inputStyle(theme), paddingLeft: 38 }}
+//               />
+//             </div>
+//           )}
+//           {needsAddress && (
+//             <div style={{ position: "relative" }}>
+//               <MapPin
+//                 size={15}
+//                 style={{
+//                   position: "absolute",
+//                   left: 14,
+//                   top: "50%",
+//                   transform: "translateY(-50%)",
+//                   color: theme.sub,
+//                   pointerEvents: "none",
+//                 }}
+//               />
+//               <input
+//                 value={address}
+//                 onChange={(e) => setAddress(e.target.value)}
+//                 placeholder="Delivery address"
+//                 style={{ ...inputStyle(theme), paddingLeft: 38 }}
+//               />
+//             </div>
+//           )}
+
+//           {error && (
+//             <div style={{ fontSize: 12.5, color: C.danger, fontWeight: 600 }}>
+//               {error}
+//             </div>
+//           )}
+
+//           <button
+//             onClick={submit}
+//             disabled={saving}
+//             className="qm-btn"
+//             style={{
+//               background: C.primary,
+//               color: "#fff",
+//               border: "none",
+//               padding: "13px",
+//               borderRadius: 12,
+//               fontWeight: 700,
+//               fontSize: 14.5,
+//               cursor: saving ? "default" : "pointer",
+//               opacity: saving ? 0.7 : 1,
+//               marginTop: 6,
+//               display: "flex",
+//               alignItems: "center",
+//               justifyContent: "center",
+//               gap: 8,
+//             }}
+//           >
+//             {saving ? (
+//               "Saving…"
+//             ) : (
+//               <>
+//                 <Check size={16} /> Save details
+//               </>
+//             )}
+//           </button>
+//         </div>
 //       </div>
 //     </div>
 //   );
@@ -286,6 +671,11 @@
 /* DashboardPage.jsx
    Customer dashboard — shows real logged-in customer info and lets them
    log out via the sidebar (wired to onLogout from App.jsx).
+
+   ORDERS: now fetched via api.getCustomerOrders(customer.id), which hits
+   GET /api/customers/:id/orders on the backend and returns only this
+   customer's own orders (filtered server-side by customer_id), instead
+   of api.getOrders() which returned every order in the system.
 
    NEW: if the logged-in customer is missing phone and/or address (e.g.
    they signed up via Google, which only provides name/email), a
@@ -332,15 +722,38 @@ export function DashboardPage({
   onUpdateCustomer,
 }) {
   const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState(null);
   const [view, setView] = useState("dashboard"); // "dashboard" | "notifications"
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
 
+  // Only fetch once we actually know who the customer is, and only that
+  // customer's own orders — never the full /api/orders list.
   useEffect(() => {
+    if (!customer?.id) {
+      setOrders([]);
+      setOrdersLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setOrdersLoading(true);
+    setOrdersError(null);
     api
-      .getOrders()
-      .then(setOrders)
-      .catch((e) => console.error("Failed to load orders:", e));
-  }, []);
+      .getCustomerOrders(customer.id)
+      .then((data) => {
+        if (!cancelled) setOrders(data || []);
+      })
+      .catch((e) => {
+        console.error("Failed to load orders:", e);
+        if (!cancelled) setOrdersError(e.message || "Failed to load orders.");
+      })
+      .finally(() => {
+        if (!cancelled) setOrdersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customer?.id]);
 
   // Figure out which required fields are missing on the customer record.
   // Google sign-ups only ever get name + email, so phone/address are
@@ -621,46 +1034,81 @@ export function DashboardPage({
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>
                 Recent orders
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {orders.map((o) => (
-                  <div
-                    key={o.id}
-                    onClick={() => goTo("tracking")}
-                    style={{
-                      cursor: "pointer",
-                      background: theme.card,
-                      border: `1px solid ${theme.border}`,
-                      borderRadius: 14,
-                      padding: "14px 18px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 700 }}>
-                        {o.id}{" "}
-                        <span style={{ color: theme.sub, fontWeight: 500 }}>
-                          · {o.order_date}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 12, color: theme.sub }}>
-                        {o.items}
-                      </div>
-                    </div>
+              {ordersLoading ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 0",
+                    color: theme.sub,
+                    fontSize: 13.5,
+                  }}
+                >
+                  Loading your orders…
+                </div>
+              ) : ordersError ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 0",
+                    color: C.danger,
+                    fontSize: 13.5,
+                  }}
+                >
+                  {ordersError}
+                </div>
+              ) : orders.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "40px 0",
+                    color: theme.sub,
+                    fontSize: 13.5,
+                  }}
+                >
+                  You haven't placed any orders yet.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {orders.map((o) => (
                     <div
-                      style={{ display: "flex", alignItems: "center", gap: 16 }}
+                      key={o.id}
+                      onClick={() => goTo("tracking")}
+                      style={{
+                        cursor: "pointer",
+                        background: theme.card,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: 14,
+                        padding: "14px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                      }}
                     >
-                      <span style={{ fontSize: 13.5, fontWeight: 700 }}>
-                        ৳{o.total}
-                      </span>
-                      <Badge tone="secondary">{o.status}</Badge>
+                      <div>
+                        <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+                          {o.id}{" "}
+                          <span style={{ color: theme.sub, fontWeight: 500 }}>
+                            · {o.order_date}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12, color: theme.sub }}>
+                          {o.items}
+                        </div>
+                      </div>
+                      <div
+                        style={{ display: "flex", alignItems: "center", gap: 16 }}
+                      >
+                        <span style={{ fontSize: 13.5, fontWeight: 700 }}>
+                          ৳{o.total}
+                        </span>
+                        <Badge tone="secondary">{o.status}</Badge>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Reveal>
           </>
         )}

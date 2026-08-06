@@ -594,21 +594,31 @@ function StatCard({ icon: Icon, label, value, tone, iconColor, highlight }) {
   );
 }
 
+// function statusColor(status) {
+//   const s = (status || "").toLowerCase();
+//   if (s === "delivered") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };
+//   if (s === "cancelled") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };
+//   return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };
+// }
+
+
 function statusColor(status) {
   const s = (status || "").toLowerCase();
-  if (s === "delivered") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };
-  if (s === "cancelled") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };
+  if (s === "placed") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };       // red — just came in
+  if (s === "preparing") return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };    // blue — confirmed, being prepared
+  if (s === "ready for pickup") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" }; // green — rider can grab it
+  if (s === "on the way") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };   // green — rider has it
+  if (s === "delivered") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };    // green — done
+  if (s === "cancelled") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };    // red
   return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };
 }
+
 
 function OrderRow({ order, isNew, onAdvance }) {
   const sc = statusColor(order.status);
   const statusLower = (order.status || "").toLowerCase();
   const isFinal = statusLower === "delivered" || statusLower === "cancelled";
-  // First stage gets a "Confirm order" label instead of the generic
-  // "Next stage" — it's the store acknowledging a brand-new order.
   const nextLabel = statusLower === "placed" ? "Confirm order" : "Next stage";
-
   return (
     <div
       style={{

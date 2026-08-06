@@ -25,17 +25,25 @@ export const api = {
   
   loginRider: (id, password) =>
     request("/api/riders/login", { method: "POST", body: JSON.stringify({ id, password }) }),
+
   updateRider: (id, profile) =>
     request(`/api/riders/${id}`, { method: "PUT", body: JSON.stringify(profile) }),
+
   changeRiderPassword: (id, currentPassword, newPassword) =>
     request(`/api/riders/${id}/password`, { method: "PUT", body: JSON.stringify({ currentPassword, newPassword }) }),
+
   getRiderDashboard: (id) => request(`/api/riders/${id}/dashboard`),
+
   acceptRiderRequest: (riderId, deliveryId) =>
     request(`/api/riders/${riderId}/requests/${deliveryId}/accept`, { method: "POST" }),
+
   declineRiderRequest: (riderId, deliveryId) =>
     request(`/api/riders/${riderId}/requests/${deliveryId}/decline`, { method: "POST" }),
+
   advanceRiderDelivery: (riderId) =>
     request(`/api/riders/${riderId}/active/advance`, { method: "PATCH" }),
+
+  getCustomerOrders: (customerId) => request(`/api/customers/${customerId}/orders`),
 
   // Customer auth
   loginCustomer: (email, password) =>
