@@ -1,3 +1,5 @@
+
+
 /* StoreApp.jsx
    Standalone medical store / pharmacy partner portal. Reached via /store,
    completely separate from the customer site and from /admin — mirrors
@@ -5,8 +7,13 @@
 
    A store logs in with the email/password an admin set for them (see
    AdminApp.jsx's "Add medical store" form) and can:
-     - see new orders as they come in (polls the backend every 8s and
-       flags anything newer than what they've already seen)
+     - see orders that still need action — status "Placed", i.e. not yet
+       confirmed by the store — this is the default view. An order is
+       "new" purely based on its STATUS, not on when it was first seen,
+       so it can never fall out of sync with what's actually happening
+       (e.g. after a page refresh, a different device, etc.)
+     - switch to an "All orders" view (top-right toggle) to see the
+       full order history regardless of status
      - see total orders and total sales
      - move an order forward (Placed -> Preparing -> Ready for pickup ->
        On the way -> Delivered)
@@ -22,7 +29,7 @@
    that once orders carry a store_id, only the backend query needs to
    change — nothing here does.
 */
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Store,
   LogOut,
@@ -33,8 +40,8 @@ import {
   Wallet,
   Bell,
   Check,
-  Clock,
-  X,
+  ListChecks,
+  ArrowLeft,
 } from "lucide-react";
 import { C } from "./theme";
 
@@ -246,7 +253,6 @@ const iconBtn = {
 };
 
 /* ---------- Dashboard ---------- */
-const lastSeenKey = (storeId) => `quickmed_store_last_seen_${storeId}`;
 
 function StoreDashboard({ session, onLogout }) {
   const { token, store } = session;
@@ -255,10 +261,7 @@ function StoreDashboard({ session, onLogout }) {
   const [totalSales, setTotalSales] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastSeenId, setLastSeenId] = useState(() => {
-    const stored = Number(localStorage.getItem(lastSeenKey(store.id)));
-    return Number.isFinite(stored) ? stored : 0;
-  });
+  const [view, setView] = useState("new"); // "new" | "all" — top-right toggle
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -285,14 +288,14 @@ function StoreDashboard({ session, onLogout }) {
     return () => clearInterval(t);
   }, [fetchOrders]);
 
-  const newOrders = orders.filter((o) => o.id > lastSeenId);
-
-  const markAllSeen = () => {
-    const maxId = orders.reduce((m, o) => Math.max(m, o.id), lastSeenId);
-    setLastSeenId(maxId);
-    localStorage.setItem(lastSeenKey(store.id), String(maxId));
-  };
-
+  // "New" = still sitting at "Placed", i.e. not yet confirmed by the store.
+  // This is driven entirely by the order's real status, so it can never
+  // drift out of sync (unlike an ID/localStorage "last seen" comparison,
+  // which could miss orders depending on ID ordering or device/browser).
+const newOrders = orders.filter((o) => {
+  const s = (o.status || "").toLowerCase();
+  return s !== "delivered" && s !== "cancelled";
+});
   const advanceStatus = async (order) => {
     const idx = STATUS_FLOW.findIndex(
       (s) => s.toLowerCase() === (order.status || "").toLowerCase(),
@@ -372,6 +375,34 @@ function StoreDashboard({ session, onLogout }) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Toggle between "just new orders" (default) and "every order" */}
+          <button
+            onClick={() => setView(view === "all" ? "new" : "all")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: view === "all" ? C.primary : "#111A2B",
+              border: `1px solid ${view === "all" ? C.primary : "#1E293B"}`,
+              color: view === "all" ? "#fff" : "#F1F5F9",
+              padding: "9px 16px",
+              borderRadius: 999,
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {view === "all" ? (
+              <>
+                <ArrowLeft size={14} /> Back to new orders
+              </>
+            ) : (
+              <>
+                <ListChecks size={14} /> View all orders
+              </>
+            )}
+          </button>
           <button onClick={fetchOrders} style={iconBtn} aria-label="Refresh">
             <RefreshCw size={16} />
           </button>
@@ -400,167 +431,181 @@ function StoreDashboard({ session, onLogout }) {
           >
             {error}
           </div>
+        ) : view === "all" ? (
+          <AllOrdersView orders={orders} onAdvance={advanceStatus} />
         ) : (
-          <>
-            {/* Stats */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3,1fr)",
-                gap: 16,
-                marginBottom: 32,
-              }}
-            >
-              <StatCard
-                icon={Bell}
-                label="New orders"
-                value={newOrders.length}
-                tone="rgba(239,68,68,0.14)"
-                iconColor="#F87171"
-                highlight={newOrders.length > 0}
-              />
-              <StatCard
-                icon={Package}
-                label="Total orders"
-                value={totalOrders}
-                tone="rgba(37,99,235,0.14)"
-                iconColor="#60A5FA"
-              />
-              <StatCard
-                icon={Wallet}
-                label="Total sales"
-                value={`৳${totalSales.toLocaleString()}`}
-                tone="rgba(16,185,129,0.14)"
-                iconColor="#34D399"
-              />
-            </div>
-
-            {/* New orders */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <Bell
-                  size={16}
-                  color={newOrders.length > 0 ? "#F87171" : "#94A3B8"}
-                />
-                New orders{" "}
-                {newOrders.length > 0 && (
-                  <span
-                    style={{
-                      background: "#F87171",
-                      color: "#fff",
-                      fontSize: 11,
-                      fontWeight: 800,
-                      borderRadius: 999,
-                      padding: "2px 8px",
-                    }}
-                  >
-                    {newOrders.length}
-                  </span>
-                )}
-              </div>
-              {newOrders.length > 0 && (
-                <button
-                  onClick={markAllSeen}
-                  style={{
-                    background: "none",
-                    border: `1px solid #1E293B`,
-                    color: "#94A3B8",
-                    padding: "7px 14px",
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Mark all as seen
-                </button>
-              )}
-            </div>
-
-            {newOrders.length === 0 ? (
-              <div
-                style={{
-                  background: "#111A2B",
-                  border: "1px solid #1E293B",
-                  borderRadius: 14,
-                  padding: 22,
-                  textAlign: "center",
-                  fontSize: 13,
-                  color: "#94A3B8",
-                  marginBottom: 36,
-                }}
-              >
-                No new orders right now — this checks for new ones automatically
-                every few seconds.
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                  marginBottom: 36,
-                }}
-              >
-                {newOrders.map((o) => (
-                  <OrderRow
-                    key={o.id}
-                    order={o}
-                    isNew
-                    onAdvance={advanceStatus}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* All orders */}
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>
-              All orders
-            </div>
-            {orders.length === 0 ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px 0",
-                  color: "#94A3B8",
-                  fontSize: 13.5,
-                }}
-              >
-                No orders yet.
-              </div>
-            ) : (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
-              >
-                {orders.map((o) => (
-                  <OrderRow
-                    key={o.id}
-                    order={o}
-                    isNew={o.id > lastSeenId}
-                    onAdvance={advanceStatus}
-                  />
-                ))}
-              </div>
-            )}
-          </>
+          <NewOrdersView
+            newOrders={newOrders}
+            totalOrders={totalOrders}
+            totalSales={totalSales}
+            onAdvance={advanceStatus}
+            onViewAll={() => setView("all")}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+/* ---------- Default view: new (Placed, unconfirmed) orders only ---------- */
+function NewOrdersView({
+  newOrders,
+  totalOrders,
+  totalSales,
+  onAdvance,
+  onViewAll,
+}) {
+  return (
+    <>
+      {/* Stats */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3,1fr)",
+          gap: 16,
+          marginBottom: 32,
+        }}
+      >
+        <StatCard
+          icon={Bell}
+          label="New orders"
+          value={newOrders.length}
+          tone="rgba(239,68,68,0.14)"
+          iconColor="#F87171"
+          highlight={newOrders.length > 0}
+        />
+        <StatCard
+          icon={Package}
+          label="Total orders"
+          value={totalOrders}
+          tone="rgba(37,99,235,0.14)"
+          iconColor="#60A5FA"
+        />
+        <StatCard
+          icon={Wallet}
+          label="Total sales"
+          value={`৳${totalSales.toLocaleString()}`}
+          tone="rgba(16,185,129,0.14)"
+          iconColor="#34D399"
+        />
+      </div>
+
+      {/* New orders */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 14,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Bell size={16} color={newOrders.length > 0 ? "#F87171" : "#94A3B8"} />
+          New orders{" "}
+          {newOrders.length > 0 && (
+            <span
+              style={{
+                background: "#F87171",
+                color: "#fff",
+                fontSize: 11,
+                fontWeight: 800,
+                borderRadius: 999,
+                padding: "2px 8px",
+              }}
+            >
+              {newOrders.length}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {newOrders.length === 0 ? (
+        <div
+          style={{
+            background: "#111A2B",
+            border: "1px solid #1E293B",
+            borderRadius: 14,
+            padding: 22,
+            textAlign: "center",
+            fontSize: 13,
+            color: "#94A3B8",
+          }}
+        >
+          No orders waiting on confirmation right now — this checks
+          automatically every few seconds. Tap "View all orders" above to
+          see everything.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {newOrders.map((o) => (
+            <OrderRow key={o.id} order={o} isNew onAdvance={onAdvance} />
+          ))}
+        </div>
+      )}
+
+      <div style={{ textAlign: "center", marginTop: 28 }}>
+        <button
+          onClick={onViewAll}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            background: "none",
+            border: `1px solid #1E293B`,
+            color: "#94A3B8",
+            padding: "10px 20px",
+            borderRadius: 999,
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          <ListChecks size={15} /> View all orders
+        </button>
+      </div>
+    </>
+  );
+}
+
+/* ---------- "View all orders" view ---------- */
+function AllOrdersView({ orders, onAdvance }) {
+  return (
+    <>
+      <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 18 }}>
+        All orders
+      </div>
+      {orders.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "40px 0",
+            color: "#94A3B8",
+            fontSize: 13.5,
+          }}
+        >
+          No orders yet.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {orders.map((o) => (
+            <OrderRow
+              key={o.id}
+              order={o}
+              isNew={(o.status || "").toLowerCase() === "placed"}
+              onAdvance={onAdvance}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -594,31 +639,41 @@ function StatCard({ icon: Icon, label, value, tone, iconColor, highlight }) {
   );
 }
 
-// function statusColor(status) {
-//   const s = (status || "").toLowerCase();
-//   if (s === "delivered") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };
-//   if (s === "cancelled") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };
-//   return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };
-// }
-
-
+/* Status pill colors, keyed by the order's actual status.
+   Placed = red (just came in, needs confirming), Preparing = blue
+   (confirmed, being made ready), Ready for pickup / On the way /
+   Delivered = green (progressing toward / at completion),
+   Cancelled = red. */
 function statusColor(status) {
   const s = (status || "").toLowerCase();
-  if (s === "placed") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };       // red — just came in
-  if (s === "preparing") return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };    // blue — confirmed, being prepared
-  if (s === "ready for pickup") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" }; // green — rider can grab it
-  if (s === "on the way") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };   // green — rider has it
-  if (s === "delivered") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };    // green — done
-  if (s === "cancelled") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };    // red
+  if (s === "placed") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };
+  if (s === "preparing") return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };
+  if (s === "ready for pickup")
+    return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };
+  if (s === "on the way") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };
+  if (s === "delivered") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };
+  if (s === "cancelled") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };
   return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };
 }
-
 
 function OrderRow({ order, isNew, onAdvance }) {
   const sc = statusColor(order.status);
   const statusLower = (order.status || "").toLowerCase();
   const isFinal = statusLower === "delivered" || statusLower === "cancelled";
+  // First stage gets a "Confirm order" label instead of the generic
+  // "Next stage" — it's the store acknowledging a brand-new order.
   const nextLabel = statusLower === "placed" ? "Confirm order" : "Next stage";
+
+  // Action button color follows the stage it's about to move the order
+  // INTO: Placed -> red (confirming a brand-new order), Preparing -> blue,
+  // anything after that -> green (heading toward / at pickup).
+  const actionColor =
+    statusLower === "placed"
+      ? "#EF4444"
+      : statusLower === "preparing"
+      ? C.primary
+      : "#22C55E";
+
   return (
     <div
       style={{
@@ -707,7 +762,7 @@ function OrderRow({ order, isNew, onAdvance }) {
             display: "flex",
             alignItems: "center",
             gap: 6,
-            background: C.primary,
+            background: actionColor,
             color: "#fff",
             border: "none",
             padding: "8px 14px",
