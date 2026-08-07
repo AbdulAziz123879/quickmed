@@ -37,7 +37,7 @@ const TABS = [
   { key: "history", label: "Delivery history", icon: History },
   { key: "profile", label: "Edit profile", icon: User },
 ];
-const POLL_MS = 8000;
+const POLL_MS = 2000;
 
 export function RiderDashboardPage({ theme, goTo, rider, onLogout }) {
   const [savedProfile, setSavedProfile] = useState(rider);

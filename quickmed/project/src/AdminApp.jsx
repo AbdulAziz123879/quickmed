@@ -30,6 +30,9 @@ import {
   Wallet,
 } from "lucide-react";
 import { C } from "./theme";
+import DetailPage from "./components/DetailPage.jsx";
+
+
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -214,6 +217,7 @@ const inputStyle = {
 };
 
 /* ---------- Dashboard ---------- */
+
 function AdminDashboard({ token, username, onLogout }) {
   const [tab, setTab] = useState("riders");
   const [riders, setRiders] = useState([]);
@@ -222,6 +226,7 @@ function AdminDashboard({ token, username, onLogout }) {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [detail, setDetail] = useState(null); // { type: 'rider'|'customer'|'order'|'store', data }
 
   const load = async () => {
     setLoading(true);
@@ -359,84 +364,115 @@ function AdminDashboard({ token, username, onLogout }) {
       <div
         style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px 80px" }}
       >
-        {/* Tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            marginBottom: 24,
-            flexWrap: "wrap",
-          }}
-        >
-          {[
-            { key: "riders", label: `Riders (${riders.length})`, icon: Bike },
-            {
-              key: "customers",
-              label: `Customers (${customers.length})`,
-              icon: Users,
-            },
-            {
-              key: "orders",
-              label: `Orders (${orders.length})`,
-              icon: Package,
-            },
-            {
-              key: "stores",
-              label: `Medical Stores (${stores.length})`,
-              icon: Store,
-            },
-          ].map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+        {detail ? (
+          <DetailPage detail={detail} onBack={() => setDetail(null)} />
+        ) : (
+          <>
+            {/* Tabs */}
+            <div
               style={{
                 display: "flex",
-                alignItems: "center",
                 gap: 8,
-                border: "none",
-                cursor: "pointer",
-                padding: "10px 18px",
-                borderRadius: 10,
-                fontSize: 13.5,
-                fontWeight: 700,
-                background: tab === t.key ? C.primary : "#111A2B",
-                color: tab === t.key ? "#fff" : "#94A3B8",
+                marginBottom: 24,
+                flexWrap: "wrap",
               }}
             >
-              <t.icon size={15} /> {t.label}
-            </button>
-          ))}
-        </div>
+              {[
+                {
+                  key: "riders",
+                  label: `Riders (${riders.length})`,
+                  icon: Bike,
+                },
+                {
+                  key: "customers",
+                  label: `Customers (${customers.length})`,
+                  icon: Users,
+                },
+                {
+                  key: "orders",
+                  label: `Orders (${orders.length})`,
+                  icon: Package,
+                },
+                {
+                  key: "stores",
+                  label: `Medical Stores (${stores.length})`,
+                  icon: Store,
+                },
+              ].map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "10px 18px",
+                    borderRadius: 10,
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    background: tab === t.key ? C.primary : "#111A2B",
+                    color: tab === t.key ? "#fff" : "#94A3B8",
+                  }}
+                >
+                  <t.icon size={15} /> {t.label}
+                </button>
+              ))}
+            </div>
 
-        {loading ? (
-          <div
-            style={{ textAlign: "center", padding: "60px 0", color: "#94A3B8" }}
-          >
-            Loading…
-          </div>
-        ) : error ? (
-          <div
-            style={{ textAlign: "center", padding: "60px 0", color: "#F87171" }}
-          >
-            {error}
-          </div>
-        ) : tab === "riders" ? (
-          <RidersTab riders={riders} onAdd={addRider} onDelete={deleteRider} />
-        ) : tab === "customers" ? (
-          <CustomersTable customers={customers} />
-        ) : tab === "orders" ? (
-          <OrdersTable orders={orders} />
-        ) : (
-          <MedicalStoresTab
-            stores={stores}
-            onAdd={addStore}
-            onDelete={deleteStore}
-          />
+            {loading ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "60px 0",
+                  color: "#94A3B8",
+                }}
+              >
+                Loading…
+              </div>
+            ) : error ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "60px 0",
+                  color: "#F87171",
+                }}
+              >
+                {error}
+              </div>
+            ) : tab === "riders" ? (
+              <RidersTab
+                riders={riders}
+                onAdd={addRider}
+                onDelete={deleteRider}
+                onSelect={(r) => setDetail({ type: "rider", data: r })}
+              />
+            ) : tab === "customers" ? (
+              <CustomersTable
+                customers={customers}
+                onSelect={(c) => setDetail({ type: "customer", data: c })}
+              />
+            ) : tab === "orders" ? (
+              <OrdersTable
+                orders={orders}
+                onSelect={(o) => setDetail({ type: "order", data: o })}
+              />
+            ) : (
+              <MedicalStoresTab
+                stores={stores}
+                onAdd={addStore}
+                onDelete={deleteStore}
+                onSelect={(s) => setDetail({ type: "store", data: s })}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
   );
 }
+
 
 const iconBtn = {
   background: "#111A2B",
@@ -452,7 +488,7 @@ const iconBtn = {
 };
 
 /* ---------- Tables ---------- */
-function RidersTab({ riders, onAdd, onDelete }) {
+function RidersTab({ riders, onAdd, onDelete, onSelect }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -489,7 +525,12 @@ function RidersTab({ riders, onAdd, onDelete }) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {riders.map((r) => (
-            <div key={r.id} style={cardStyle}>
+            // <div key={r.id} style={cardStyle}>
+            <div
+              key={r.id}
+              style={{ ...cardStyle, cursor: "pointer" }}
+              onClick={() => onSelect?.(r)}
+            >
               <div
                 style={{
                   width: 40,
@@ -593,7 +634,10 @@ function RidersTab({ riders, onAdd, onDelete }) {
                 <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Earned</div>
               </div>
               <button
-                onClick={() => onDelete(r.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(r.id);
+                }}
                 style={{
                   background: "none",
                   border: "none",
@@ -859,193 +903,95 @@ function AddRiderModal({ onClose, onAdd }) {
 /* CustomersTable: click a row to expand and see that customer's full
    order history (id, date, address, total). Order count + total spent
    are shown inline on the collapsed row. */
-function CustomersTable({ customers }) {
-  const [openId, setOpenId] = useState(null);
+// 
 
+function CustomersTable({ customers, onSelect }) {
   if (customers.length === 0) return <EmptyState label="No customers found." />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {customers.map((c) => {
-        const isOpen = openId === c.id;
-        const orders = c.orders || [];
-        return (
+      {customers.map((c) => (
+        <div
+          key={c.id}
+          onClick={() => onSelect?.(c)}
+          style={{ ...cardStyle, cursor: "pointer" }}
+        >
           <div
-            key={c.id}
             style={{
-              background: "#111A2B",
-              border: "1px solid #1E293B",
-              borderRadius: 14,
-              overflow: "hidden",
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              background: "#1A2437",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              fontWeight: 800,
+              fontSize: 13,
             }}
           >
+            {(c.name || "?")
+              .split(" ")
+              .map((w) => w[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+              {c.name}{" "}
+              <span style={{ color: "#94A3B8", fontWeight: 500 }}>
+                · #{c.id}
+              </span>
+            </div>
             <div
-              onClick={() => setOpenId(isOpen ? null : c.id)}
-              style={{ ...cardStyle, border: "none", cursor: "pointer" }}
+              style={{
+                display: "flex",
+                gap: 14,
+                marginTop: 6,
+                fontSize: 11.5,
+                color: "#94A3B8",
+              }}
             >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  background: "#1A2437",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  fontWeight: 800,
-                  fontSize: 13,
-                }}
-              >
-                {(c.name || "?")
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700 }}>
-                  {c.name}{" "}
-                  <span style={{ color: "#94A3B8", fontWeight: 500 }}>
-                    · #{c.id}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 14,
-                    marginTop: 6,
-                    fontSize: 11.5,
-                    color: "#94A3B8",
-                  }}
-                >
-                  <span
-                    style={{ display: "flex", alignItems: "center", gap: 4 }}
-                  >
-                    <Mail size={11} /> {c.email}
-                  </span>
-                  {c.phone && (
-                    <span
-                      style={{ display: "flex", alignItems: "center", gap: 4 }}
-                    >
-                      <Phone size={11} /> {c.phone}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div style={{ textAlign: "center", minWidth: 64 }}>
-                <div style={{ fontSize: 15, fontWeight: 800 }}>
-                  {c.order_count}
-                </div>
-                <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Orders</div>
-              </div>
-              <div style={{ textAlign: "center", minWidth: 90 }}>
-                <div
-                  style={{ fontSize: 15, fontWeight: 800, color: "#34D399" }}
-                >
-                  ৳{Number(c.total_spent).toLocaleString()}
-                </div>
-                <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Spent</div>
-              </div>
-              <div style={{ fontSize: 11.5, color: "#94A3B8" }}>
-                {c.created_at
-                  ? new Date(c.created_at).toLocaleDateString()
-                  : ""}
-              </div>
-              {isOpen ? (
-                <ChevronUp size={16} color="#94A3B8" />
-              ) : (
-                <ChevronDown size={16} color="#94A3B8" />
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <Mail size={11} /> {c.email}
+              </span>
+              {c.phone && (
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Phone size={11} /> {c.phone}
+                </span>
               )}
             </div>
-
-            {isOpen && (
-              <div
-                style={{ borderTop: "1px solid #1E293B", padding: "14px 18px" }}
-              >
-                {orders.length === 0 ? (
-                  <div style={{ fontSize: 12.5, color: "#94A3B8" }}>
-                    No orders placed yet.
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                    }}
-                  >
-                    {orders.map((o) => (
-                      <div
-                        key={o.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 14,
-                          fontSize: 12.5,
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <span
-                          style={{
-                            color: "#F1F5F9",
-                            fontWeight: 700,
-                            minWidth: 90,
-                          }}
-                        >
-                          {o.id}
-                        </span>
-                        <span style={{ color: "#94A3B8", minWidth: 70 }}>
-                          {o.order_date}
-                        </span>
-                        <span
-                          style={{ color: "#94A3B8", flex: 1, minWidth: 160 }}
-                        >
-                          {o.address || "No address provided"}
-                        </span>
-                        <span
-                          style={{
-                            background: "rgba(37,99,235,0.14)",
-                            color: "#60A5FA",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: "3px 10px",
-                            borderRadius: 999,
-                          }}
-                        >
-                          {o.status}
-                        </span>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            minWidth: 60,
-                            textAlign: "right",
-                          }}
-                        >
-                          ৳{o.total}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-        );
-      })}
+          <div style={{ textAlign: "center", minWidth: 64 }}>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>{c.order_count}</div>
+            <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Orders</div>
+          </div>
+          <div style={{ textAlign: "center", minWidth: 90 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#34D399" }}>
+              ৳{Number(c.total_spent).toLocaleString()}
+            </div>
+            <div style={{ fontSize: 10.5, color: "#94A3B8" }}>Spent</div>
+          </div>
+          <div style={{ fontSize: 11.5, color: "#94A3B8" }}>
+            {c.created_at ? new Date(c.created_at).toLocaleDateString() : ""}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-function OrdersTable({ orders }) {
+
+
+function OrdersTable({ orders, onSelect }) {
   if (orders.length === 0) return <EmptyState label="No orders found." />;
 
   const statusColor = (status) => {
     const s = (status || "").toLowerCase();
     if (s === "delivered") return { bg: "rgba(34,197,94,0.14)", fg: "#4ADE80" };
     if (s === "cancelled") return { bg: "rgba(239,68,68,0.14)", fg: "#F87171" };
-    return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" }; // placed / preparing / on the way / default
+    return { bg: "rgba(37,99,235,0.14)", fg: "#60A5FA" };
   };
 
   return (
@@ -1053,7 +999,11 @@ function OrdersTable({ orders }) {
       {orders.map((o) => {
         const sc = statusColor(o.status);
         return (
-          <div key={o.id} style={cardStyle}>
+          <div
+            key={o.id}
+            onClick={() => onSelect?.(o)}
+            style={{ ...cardStyle, cursor: "pointer" }}
+          >
             <div
               style={{
                 width: 40,
@@ -1107,11 +1057,156 @@ function OrdersTable({ orders }) {
 }
 
 /* ---------- Medical Stores (new) ---------- */
-function MedicalStoresTab({ stores, onAdd, onDelete }) {
+// function MedicalStoresTab({ stores, onAdd, onDelete, onSelect }) {
+//   const [open, setOpen] = useState(false);
+
+//   return (
+//     <div>
+//       <div
+//         key={s.id}
+//         style={{ ...cardStyle, cursor: "pointer" }}
+//         onClick={() => onSelect?.(s)}
+//       ></div>
+//       <button
+//         onClick={(e) => {
+//           e.stopPropagation();
+//           onDelete(s.id);
+//         }}
+//         style={{
+//           background: "none",
+//           border: "none",
+//           cursor: "pointer",
+//           color: "#94A3B8",
+//         }}
+//         aria-label="Remove store"
+//       >
+//         <Trash2 size={16} />
+//       </button>
+//       <div
+//         style={{
+//           display: "flex",
+//           justifyContent: "flex-end",
+//           marginBottom: 16,
+//         }}
+//       >
+//         <button
+//           onClick={() => setOpen(true)}
+//           style={{
+//             display: "flex",
+//             alignItems: "center",
+//             gap: 8,
+//             background: C.primary,
+//             color: "#fff",
+//             border: "none",
+//             padding: "10px 18px",
+//             borderRadius: 10,
+//             fontSize: 13.5,
+//             fontWeight: 700,
+//             cursor: "pointer",
+//           }}
+//         >
+//           <Plus size={15} /> Add medical store
+//         </button>
+//       </div>
+
+//       {stores.length === 0 ? (
+//         <EmptyState label="No medical stores added yet." />
+//       ) : (
+//         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+//           {stores.map((s) => (
+//             <div key={s.id} style={cardStyle}>
+//               <div
+//                 style={{
+//                   width: 40,
+//                   height: 40,
+//                   borderRadius: 10,
+//                   background: "#1A2437",
+//                   display: "flex",
+//                   alignItems: "center",
+//                   justifyContent: "center",
+//                   flexShrink: 0,
+//                 }}
+//               >
+//                 <Store size={18} color={C.primary} />
+//               </div>
+//               <div style={{ flex: 1, minWidth: 220 }}>
+//                 <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+//                   {s.name}
+//                   {s.license_number && (
+//                     <span style={{ color: "#94A3B8", fontWeight: 500 }}>
+//                       {" "}
+//                       · Lic# {s.license_number}
+//                     </span>
+//                   )}
+//                 </div>
+//                 {s.address && (
+//                   <div
+//                     style={{
+//                       fontSize: 12,
+//                       color: "#94A3B8",
+//                       marginTop: 2,
+//                       display: "flex",
+//                       alignItems: "center",
+//                       gap: 4,
+//                     }}
+//                   >
+//                     <MapPin size={11} /> {s.address}
+//                   </div>
+//                 )}
+//                 <div
+//                   style={{
+//                     display: "flex",
+//                     gap: 14,
+//                     marginTop: 6,
+//                     fontSize: 11.5,
+//                     color: "#94A3B8",
+//                   }}
+//                 >
+//                   {s.phone && (
+//                     <span
+//                       style={{ display: "flex", alignItems: "center", gap: 4 }}
+//                     >
+//                       <Phone size={11} /> {s.phone}
+//                     </span>
+//                   )}
+//                   {s.email && (
+//                     <span
+//                       style={{ display: "flex", alignItems: "center", gap: 4 }}
+//                     >
+//                       <Mail size={11} /> {s.email}
+//                     </span>
+//                   )}
+//                 </div>
+//               </div>
+//               <StatusPill status={s.status} />
+//               <button
+//                 onClick={() => onDelete(s.id)}
+//                 style={{
+//                   background: "none",
+//                   border: "none",
+//                   cursor: "pointer",
+//                   color: "#94A3B8",
+//                 }}
+//                 aria-label="Remove store"
+//               >
+//                 <Trash2 size={16} />
+//               </button>
+//             </div>
+//           ))}
+//         </div>
+//       )}
+
+//       {open && <AddStoreModal onClose={() => setOpen(false)} onAdd={onAdd} />}
+//     </div>
+//   );
+// }
+
+function MedicalStoresTab({ stores, onAdd, onDelete, onSelect }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div>
+      {/* Add Medical Store Button */}
       <div
         style={{
           display: "flex",
@@ -1135,16 +1230,34 @@ function MedicalStoresTab({ stores, onAdd, onDelete }) {
             cursor: "pointer",
           }}
         >
-          <Plus size={15} /> Add medical store
+          Add medical store
         </button>
       </div>
 
+      {/* Medical Stores List */}
       {stores.length === 0 ? (
         <EmptyState label="No medical stores added yet." />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
           {stores.map((s) => (
-            <div key={s.id} style={cardStyle}>
+            <div
+              key={s.id}
+              style={{
+                ...cardStyle,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+              }}
+              onClick={() => onSelect?.(s)}
+            >
+              {/* Store Icon */}
               <div
                 style={{
                   width: 40,
@@ -1159,16 +1272,37 @@ function MedicalStoresTab({ stores, onAdd, onDelete }) {
               >
                 <Store size={18} color={C.primary} />
               </div>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700 }}>
+
+              {/* Store Information */}
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 220,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                  }}
+                >
                   {s.name}
+
                   {s.license_number && (
-                    <span style={{ color: "#94A3B8", fontWeight: 500 }}>
+                    <span
+                      style={{
+                        color: "#94A3B8",
+                        fontWeight: 500,
+                      }}
+                    >
                       {" "}
                       · Lic# {s.license_number}
                     </span>
                   )}
                 </div>
+
+
+                {/* Address */}
                 {s.address && (
                   <div
                     style={{
@@ -1180,9 +1314,13 @@ function MedicalStoresTab({ stores, onAdd, onDelete }) {
                       gap: 4,
                     }}
                   >
-                    <MapPin size={11} /> {s.address}
+                    <MapPin size={11} />
+                    {s.address}
                   </div>
                 )}
+
+
+                {/* Phone and Email */}
                 <div
                   style={{
                     display: "flex",
@@ -1194,23 +1332,43 @@ function MedicalStoresTab({ stores, onAdd, onDelete }) {
                 >
                   {s.phone && (
                     <span
-                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
-                      <Phone size={11} /> {s.phone}
+                      <Phone size={11} />
+                      {s.phone}
                     </span>
                   )}
+
                   {s.email && (
                     <span
-                      style={{ display: "flex", alignItems: "center", gap: 4 }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
-                      <Mail size={11} /> {s.email}
+                      <Mail size={11} />
+                      {s.email}
                     </span>
                   )}
                 </div>
               </div>
+
+
+              {/* Status */}
               <StatusPill status={s.status} />
+
+
+              {/* Delete Button */}
               <button
-                onClick={() => onDelete(s.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(s.id);
+                }}
                 style={{
                   background: "none",
                   border: "none",
@@ -1226,10 +1384,18 @@ function MedicalStoresTab({ stores, onAdd, onDelete }) {
         </div>
       )}
 
-      {open && <AddStoreModal onClose={() => setOpen(false)} onAdd={onAdd} />}
+
+      {/* Add Store Modal */}
+      {open && (
+        <AddStoreModal
+          onClose={() => setOpen(false)}
+          onAdd={onAdd}
+        />
+      )}
     </div>
   );
 }
+
 
 function StatusPill({ status }) {
   const s = (status || "Active").toLowerCase();

@@ -783,14 +783,16 @@ app.post("/api/stores/logout", requireStore, (req, res) => {
    name). rider_name is null for orders no rider has accepted yet.
 
    See the scope note above. */
+
+
 app.get("/api/stores/orders", requireStore, async (req, res) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT o.*, r.name AS rider_name
-      FROM orders o
-      LEFT JOIN riders r ON r.id = o.rider_id
-      ORDER BY o.id DESC
-    `);
+    const { rows } = await pool.query(
+      `SELECT * FROM orders
+       WHERE store_id = $1 OR (store_id IS NULL AND status = 'Placed')
+       ORDER BY id DESC`,
+      [req.store.id],
+    );
     const totalOrders = rows.length;
     const totalSales = rows
       .filter((o) => (o.status || "").toLowerCase() !== "cancelled")
@@ -808,23 +810,36 @@ app.get("/api/stores/orders", requireStore, async (req, res) => {
    (Placed -> Preparing -> Ready for pickup -> On the way -> Delivered),
    or Cancelled. "Ready for pickup" is what makes an order visible to
    riders — see the RIDER ORDER FLOW section below. */
+
+
 app.patch("/api/stores/orders/:id/status", requireStore, async (req, res) => {
   try {
     const { status } = req.body || {};
     if (!status?.trim()) {
       return res.status(400).json({ error: "Status is required." });
     }
+
+    // Atomic claim: succeeds if this store already owns the order, OR
+    // the order is still unclaimed and sitting at "Placed" (in which case
+    // this store becomes the owner). Anyone else trying the same thing
+    // a moment later gets 0 rows back — no double-claiming.
     const { rows } = await pool.query(
-      "UPDATE orders SET status = $1 WHERE id = $2 RETURNING *",
-      [status.trim(), req.params.id],
+      `UPDATE orders
+       SET status = $1,
+           store_id = COALESCE(store_id, $2)
+       WHERE id = $3
+         AND (store_id = $2 OR (store_id IS NULL AND status = 'Placed'))
+       RETURNING *`,
+      [status.trim(), req.store.id, req.params.id],
     );
+
     if (rows.length === 0) {
-      return res.status(404).json({ error: "Order not found." });
+      return res.status(409).json({
+        error:
+          "This order was already accepted by another store, or no longer exists.",
+      });
     }
 
-    // Store confirming the order (moving it past "Placed") releases the
-    // matching delivery to riders — flips it from 'awaiting_confirmation'
-    // to 'pending' so it starts showing up on rider dashboards.
     if (status.trim().toLowerCase() !== "placed") {
       await pool.query(
         "UPDATE deliveries SET status = 'pending' WHERE order_id = $1 AND status = 'awaiting_confirmation'",
