@@ -5,12 +5,12 @@
    Customer dashboard — shows real logged-in customer info and lets them
    log out via the sidebar (wired to onLogout from App.jsx).
 
-   ORDERS: now fetched via api.getCustomerOrders(customer.id), which hits
-   GET /api/customers/:id/orders on the backend and returns only this
-   customer's own orders (filtered server-side by customer_id), instead
-   of api.getOrders() which returned every order in the system.
+   NOTE: the "Recent orders" section (and its api.getOrders() fetch) has
+   been removed. If you want it back later, it previously fetched
+   GET /api/orders and rendered each order in a clickable card linking
+   to the tracking page.
 
-   NEW: if the logged-in customer is missing phone and/or address (e.g.
+   If the logged-in customer is missing phone and/or address (e.g.
    they signed up via Google, which only provides name/email), a
    notification badge appears on "Notifications" and a banner shows on
    the dashboard prompting them to complete their registration. Clicking
@@ -18,19 +18,14 @@
    missing, then saves via api.updateCustomer and refreshes the customer
    object app-wide via onUpdateCustomer (passed down from App.jsx).
 */
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Home as HomeIcon,
   Pill,
   Package,
-  FileText,
   Heart,
   Bell,
-  User,
   Settings,
-  LogOut,
-  ScanLine,
-  Siren,
   ShoppingCart,
   Gift,
   MapPin,
@@ -54,39 +49,8 @@ export function DashboardPage({
   onLogout,
   onUpdateCustomer,
 }) {
-  const [orders, setOrders] = useState([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
-  const [ordersError, setOrdersError] = useState(null);
   const [view, setView] = useState("dashboard"); // "dashboard" | "notifications"
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
-
-  // Only fetch once we actually know who the customer is, and only that
-  // customer's own orders — never the full /api/orders list.
-  useEffect(() => {
-    if (!customer?.id) {
-      setOrders([]);
-      setOrdersLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setOrdersLoading(true);
-    setOrdersError(null);
-    api
-      .getCustomerOrders(customer.id)
-      .then((data) => {
-        if (!cancelled) setOrders(data || []);
-      })
-      .catch((e) => {
-        console.error("Failed to load orders:", e);
-        if (!cancelled) setOrdersError(e.message || "Failed to load orders.");
-      })
-      .finally(() => {
-        if (!cancelled) setOrdersLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [customer?.id]);
 
   // Figure out which required fields are missing on the customer record.
   // Google sign-ups only ever get name + email, so phone/address are
@@ -280,20 +244,13 @@ export function DashboardPage({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4,1fr)",
+                gridTemplateColumns: "repeat(3,1fr)",
                 gap: 16,
                 marginBottom: 32,
               }}
               className="qm-dash-stats"
             >
               {[
-                {
-                  label: "Orders",
-                  value: orders.length,
-                  icon: Package,
-                  tone: "#EFF6FF",
-                  iconColor: C.primary,
-                },
                 {
                   label: "Cart items",
                   value: cart.length,
@@ -361,87 +318,6 @@ export function DashboardPage({
                   addToCart={addToCart}
                 />
               </div>
-            </Reveal>
-
-            <Reveal>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>
-                Recent orders
-              </div>
-              {ordersLoading ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "40px 0",
-                    color: theme.sub,
-                    fontSize: 13.5,
-                  }}
-                >
-                  Loading your orders…
-                </div>
-              ) : ordersError ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "40px 0",
-                    color: C.danger,
-                    fontSize: 13.5,
-                  }}
-                >
-                  {ordersError}
-                </div>
-              ) : orders.length === 0 ? (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "40px 0",
-                    color: theme.sub,
-                    fontSize: 13.5,
-                  }}
-                >
-                  You haven't placed any orders yet.
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {orders.map((o) => (
-                    <div
-                      key={o.id}
-                      onClick={() => goTo("tracking")}
-                      style={{
-                        cursor: "pointer",
-                        background: theme.card,
-                        border: `1px solid ${theme.border}`,
-                        borderRadius: 14,
-                        padding: "14px 18px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: 13.5, fontWeight: 700 }}>
-                          {o.id}{" "}
-                          <span style={{ color: theme.sub, fontWeight: 500 }}>
-                            · {o.order_date}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 12, color: theme.sub }}>
-                          {o.items}
-                        </div>
-                      </div>
-                      <div
-                        style={{ display: "flex", alignItems: "center", gap: 16 }}
-                      >
-                        <span style={{ fontSize: 13.5, fontWeight: 700 }}>
-                          ৳{o.total}
-                        </span>
-                        <Badge tone="secondary">{o.status}</Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </Reveal>
           </>
         )}
