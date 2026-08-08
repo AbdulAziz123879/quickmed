@@ -1,5 +1,6 @@
 
 
+
 /* App.jsx
    Root component — handles routing between pages, theme and global state.
 */
@@ -50,6 +51,7 @@ export default function QuickMedApp() {
   const [dark, setDark] = useState(false);
   const [wishlist, setWishlist] = useState({});
   const [cart, setCart] = useState([]);
+  const [checkoutItems, setCheckoutItems] = useState([]);
   const [history, setHistory] = useState([]);
   const [rider, setRider] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -222,16 +224,20 @@ export default function QuickMedApp() {
         updateQty={updateQty}
         removeFromCart={removeFromCart}
         goTo={goTo}
+        onProceedToCheckout={(items) => {
+          setCheckoutItems(items);
+          goTo("checkout");
+        }}
       />
     );
   else if (page === "checkout")
     body = (
       <CheckoutPage
         theme={theme}
-        cart={cart}
+        items={checkoutItems}
         goTo={goTo}
         addToCart={addToCart}
-        clearCart={clearCart}
+        removeFromCart={removeFromCart}
         customer={customer}
       />
     );

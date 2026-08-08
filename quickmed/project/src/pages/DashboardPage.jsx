@@ -1,6 +1,7 @@
 
 
 
+
 /* DashboardPage.jsx
    Customer dashboard — shows real logged-in customer info and lets them
    log out via the sidebar (wired to onLogout from App.jsx).
