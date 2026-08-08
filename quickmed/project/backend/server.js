@@ -1,7 +1,6 @@
 
 
 
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -243,6 +242,47 @@ app.put("/api/riders/:id", async (req, res) => {
   }
 });
 
+/* PUT /api/riders/:id/password
+   Body: { currentPassword, newPassword }
+   Lets a logged-in rider change their password. Rider passwords are
+   stored in plaintext today (see /api/riders/login), so this compares
+   directly rather than with bcrypt. */
+app.put("/api/riders/:id/password", async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Current and new password are required." });
+    }
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ error: "New password must be at least 6 characters." });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT password FROM riders WHERE id = $1",
+      [req.params.id],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Rider not found." });
+    }
+    if (rows[0].password !== currentPassword) {
+      return res.status(401).json({ error: "Current password is incorrect." });
+    }
+
+    await pool.query("UPDATE riders SET password = $1 WHERE id = $2", [
+      newPassword,
+      req.params.id,
+    ]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[quickmed-backend] PUT /api/riders/:id/password error:", err);
+    res.status(500).json({ error: "Failed to update password." });
+  }
+});
+
 /* =========================================================
    CUSTOMERS
 ========================================================= */
@@ -315,6 +355,72 @@ app.put("/api/customers/:id", async (req, res) => {
   } catch (err) {
     console.error("[quickmed-backend] PUT /api/customers/:id error:", err);
     res.status(500).json({ error: "Failed to update customer profile." });
+  }
+});
+
+/* GET /api/customers/:id/orders
+   Every order this customer has placed, newest first. Powers the
+   "Orders" tab in the customer dashboard. */
+app.get("/api/customers/:id/orders", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM orders WHERE customer_id = $1 ORDER BY id DESC",
+      [req.params.id],
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(
+      "[quickmed-backend] GET /api/customers/:id/orders error:",
+      err,
+    );
+    res.status(500).json({ error: "Failed to fetch customer orders." });
+  }
+});
+
+/* PUT /api/customers/:id/password
+   Body: { currentPassword, newPassword }
+   Lets a logged-in customer change their password. Not usable for
+   Google-only accounts, since those never had a real password set
+   (see /api/customers/google-auth). */
+app.put("/api/customers/:id/password", async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Current and new password are required." });
+    }
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ error: "New password must be at least 6 characters." });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT password FROM customers WHERE id = $1",
+      [req.params.id],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Customer not found." });
+    }
+
+    const match = await bcrypt.compare(currentPassword, rows[0].password);
+    if (!match) {
+      return res.status(401).json({ error: "Current password is incorrect." });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.query("UPDATE customers SET password = $1 WHERE id = $2", [
+      hashed,
+      req.params.id,
+    ]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(
+      "[quickmed-backend] PUT /api/customers/:id/password error:",
+      err,
+    );
+    res.status(500).json({ error: "Failed to update password." });
   }
 });
 

@@ -57,6 +57,9 @@ export const api = {
   updateCustomer: (id, profile) =>
   request(`/api/customers/${id}`, { method: "PUT", body: JSON.stringify(profile) }),
 
+  changeCustomerPassword: (id, currentPassword, newPassword) =>
+    request(`/api/customers/${id}/password`, { method: "PUT", body: JSON.stringify({ currentPassword, newPassword }) }),
+
   getOrders: () => request("/api/orders"),
 
   createOrder: (order) =>
